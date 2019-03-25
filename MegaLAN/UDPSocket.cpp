@@ -18,7 +18,7 @@ void UDPSocket::Start()
 
 	struct sockaddr_in6 server_addr = { 0 };
 	server_addr.sin6_family = AF_INET6;
-	server_addr.sin6_port = htons(65500);
+	server_addr.sin6_port = htons(500);
 
 	Socket = socket(AF_INET6, SOCK_DGRAM, 0);
 	int val = 0;
