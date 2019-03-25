@@ -207,10 +207,10 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		LVCOLUMN PeerCol;
 		PeerCol.mask = LVCF_WIDTH | LVCF_TEXT;
 		PeerCol.pszText = (LPWSTR)L"Name";
-		PeerCol.cx = rect.right - rect.left - 150;
+		PeerCol.cx = rect.right - rect.left - 160;
 		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERS), 0, &PeerCol);
 		PeerCol.pszText = (LPWSTR)L"";
-		PeerCol.cx = 40;
+		PeerCol.cx = 50;
 		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERS), 1, &PeerCol);
 		PeerCol.pszText = (LPWSTR)L"MAC";
 		PeerCol.cx = 110;
