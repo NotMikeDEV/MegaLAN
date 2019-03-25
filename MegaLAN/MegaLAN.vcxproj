@@ -132,6 +132,10 @@
       <Version>
       </Version>
     </Link>
+    <PostBuildEvent>
+      <Command>cd $(SolutionDir)
+"c:\Program Files (x86)\NSIS\makensis.exe" Installer-32bit.nsi</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -151,6 +155,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>Ws2_32.lib</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>cd $(SolutionDir)
+"c:\Program Files (x86)\NSIS\makensis.exe" Installer-64bit.nsi</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
