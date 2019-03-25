@@ -672,60 +672,24 @@ uint16_t ip_checksum(void* vdata, size_t length) {
 	// Return the checksum in network byte order.
 	return htons(~acc);
 }
-
-uint16_t ip6checksum(void* vdata, UINT16 length, BYTE* SrcIP, BYTE* DestIP, UINT16 Protocol)
-{
-	// Cast the data pointer to one that can be indexed.
-	char* data = (char*)vdata;
-
-	// Initialise the accumulator.
-	uint32_t acc = 0xffff;
-
-	// Handle SrcIP
-	for (size_t i = 0; i + 1 < 16; i += 2) {
-		uint16_t word;
-		memcpy(&word, SrcIP + i, 2);
-		acc += ntohs(word);
-		if (acc > 0xffff) {
-			acc -= 0xffff;
-		}
-	}
-
-	// Handle DestIP
-	for (size_t i = 0; i + 1 < 16; i += 2) {
-		uint16_t word;
-		memcpy(&word, DestIP + i, 2);
-		acc += ntohs(word);
-		if (acc > 0xffff) {
-			acc -= 0xffff;
-		}
-	}
-	acc += ntohs(htons(Protocol));
-	acc += ntohs(htons(length));
-	// Handle complete 16-bit blocks.
-	for (size_t i = 0; i + 1 < length; i += 2) {
-		uint16_t word;
-		memcpy(&word, data + i, 2);
-		acc += ntohs(word);
-		if (acc > 0xffff) {
-			acc -= 0xffff;
-		}
-	}
-
-	// Handle any partial block at the end of the data.
-	if (length & 1) {
-		uint16_t word = 0;
-		memcpy(&word, data + length - 1, 1);
-		acc += ntohs(word);
-		if (acc > 0xffff) {
-			acc -= 0xffff;
-		}
-	}
-
-	// Return the checksum in network byte order.
-	return htons(~acc);
-}
-
+struct iphdr {
+	uint8_t  verhdrlen;
+	uint8_t  service;
+	uint16_t len;
+	uint16_t ident;
+	uint16_t frags;
+	uint8_t  ttl;
+	uint8_t  protocol;
+	uint16_t chksum;
+	struct in_addr src;
+	struct in_addr dest;
+};
+struct udphdr {
+	uint16_t srcport;
+	uint16_t dstport;
+	uint16_t length;
+	uint16_t chksum;
+};
 void Client::ReadPacket(BYTE* Buffer, WORD len)
 {
 	struct MAC ToMAC;
@@ -734,88 +698,105 @@ void Client::ReadPacket(BYTE* Buffer, WORD len)
 	UINT16 EthernetType = htons(*(UINT16*)(Buffer + 12));
 	if (EthernetType == 0x0800 && memcmp(MyMAC, FromMAC, 6) == 0)
 	{
-		BYTE* IPv4Header = Buffer + 14;
-		BYTE IPv4HeaderLength = (IPv4Header[0] & 0x0F)<<2;
-		BYTE Protocol = IPv4Header[9];
-		UINT16* IPv4CheckSum = (UINT16*)(IPv4Header +10);
-		struct in_addr* SourceIPv4 = (struct in_addr*)(IPv4Header + 12);
-		if (memcmp(SourceIPv4, &IPv4_Address, 4) && *(UINT32*)SourceIPv4 != INADDR_ANY)
+		struct iphdr* IPv4Header = (struct iphdr*) (Buffer + 14);
+		BYTE IPv4HeaderLength = (IPv4Header->verhdrlen & 0x0F)<<2;
+		BYTE Protocol = IPv4Header->protocol;
+		struct in_addr &SourceIPv4 = IPv4Header->src;
+		if (memcmp(&SourceIPv4, &IPv4_Address, 4) && *(UINT32*)&SourceIPv4 != INADDR_ANY)
 		{
-			printf("Spoofed source IPv4\n");
+			char IP[128];
+			inet_ntop(AF_INET, &SourceIPv4, IP, sizeof(IP));
+			printf("Spoofed source IPv4 %s\n", IP);
 			return;
 		}
-		DWORD Out;
-		WriteFile(Device, Buffer, len, &Out, NULL);
-		struct in_addr* DestinationIPv4 = (struct in_addr*)(IPv4Header + 16);
 		if (Protocol == 0x11)
 		{
-			BYTE* UDPPacket = IPv4Header + IPv4HeaderLength;
-			UINT16* UDPSrcPort = (UINT16*)UDPPacket;
-			UINT16* UDPDestPort = (UINT16*)(UDPPacket +2);
-			UDPPacket[6] = UDPPacket[7] = 0;
-			if (htons(*UDPDestPort) == 67)
+			struct udphdr* UDPHeader = (struct udphdr*)((BYTE*)IPv4Header + IPv4HeaderLength);
+			UINT16 UDPSrcPort = htons(UDPHeader->srcport);
+			UINT16 UDPDestPort = htons(UDPHeader->dstport);
+			if (UDPDestPort == 67)
 			{
-				BYTE* Payload = UDPPacket + 8;
-				if (Payload[0] == 1 && Payload[1] == 1)
+				BYTE* Payload = (BYTE*)UDPHeader + sizeof(struct udphdr);
+				if (Payload[0] == 1) // Boot Request
 				{
-					Payload[0] = 2;
-					DWORD TransactionID = *(DWORD*)(Payload+4);
-					struct in_addr* ClientIPv4 = (struct in_addr*)(Payload + 12);
-					struct in_addr* YourIPv4 = (struct in_addr*)(Payload + 16);
-					struct in_addr* ServerIPv4 = (struct in_addr*)(Payload + 20);
-					struct in_addr* RelayIPv4 = (struct in_addr*)(Payload + 24);
-					DWORD Cookie = htonl(*(DWORD*)(Payload + 236));
-					BYTE* Options = Payload + 240;
-					BYTE Option = Options[0];
-					BYTE OptionLen = Options[1];
-					BYTE OptionVal = Options[2];
-					if (Cookie == 0x63825363 && Option == 53 && (OptionVal == 1 || OptionVal == 3))
-					{
-						*(WORD*)(Payload + 10) = 0x80;
-						*(DWORD*)SourceIPv4 = *(DWORD*)ServerIPv4 = 0x0000000A;
-						*(DWORD*)YourIPv4 = *(DWORD*)&this->IPv4_Address;
-						if (OptionVal == 1)
-							Options[2] = 2;
-						else if (OptionVal == 3)
-							Options[2] = 5;
-						FromMAC[5] ^= 0xFF;
-						BYTE* Option = Options + 3;
-						Option[0] = 54;
-						Option[1] = 4;
-						*(DWORD*)(Option + 2) = *(DWORD*)SourceIPv4;
-						Option = Option + 6;
-						Option[0] = 51;
-						Option[1] = 4;
-						*(DWORD*)(Option + 2) = htonl(900);
-						Option = Option + 6;
-						Option[0] = 58;
-						Option[1] = 4;
-						*(DWORD*)(Option + 2) = htonl(610);
-						Option = Option + 6;
-						Option[0] = 59;
-						Option[1] = 4;
-						*(DWORD*)(Option + 2) = htonl(600);
-						Option = Option + 6;
-						Option[0] = 1;
-						Option[1] = 4;
-						*(DWORD*)(Option + 2) = htonl(0xFFFFFFFF<<(32-this->IPv4_PrefixLength));
-						Option = Option + 6;
-						Option[0] = 0xFF;
-						Option[1] = 0x00;
-						Option[2] = 0x00;
+					DWORD TransactionID = *(DWORD*)(Payload + 4);
 
-						*(WORD*)(IPv4Header + 2) = htons(Option - 11 - Buffer);
-						*(WORD*)(UDPPacket + 4) = htons(Option - 31 - Buffer);
-						*UDPDestPort = *UDPSrcPort;
-						*UDPSrcPort = htons(67);
-						*IPv4CheckSum = 0;
-						*IPv4CheckSum = (UINT16)ip_checksum(IPv4Header, IPv4HeaderLength);
-						DWORD Out;
-						OVERLAPPED ol = { 0 };
-						WriteFile(Device, Buffer, Option+3-Buffer, &Out, &ol);
-						printf("DHCP Request, answered locally\n");
-						return;
-					}
+					BYTE DHCPResponse[1500] = { 0 };
+					memcpy(DHCPResponse, Buffer + 6, 6);// To MAC
+					memcpy(DHCPResponse + 6, Buffer + 6, 6);// From MAC
+					DHCPResponse[7] ^= 0xFF; // Toggle 1 byte of From MAC
+					*(UINT16*)(DHCPResponse + 12) = htons(0x0800);// EtherType
+
+					struct iphdr* ResponseIPHeader = (struct iphdr*)(DHCPResponse + 14);
+					ResponseIPHeader->verhdrlen = 0x45;
+					ResponseIPHeader->ident = 0xF00D;
+					ResponseIPHeader->frags = 0;
+					ResponseIPHeader->ttl = 2;
+					ResponseIPHeader->protocol = 0x11;
+					inet_pton(AF_INET, "10.0.0.0", &ResponseIPHeader->src);
+					ResponseIPHeader->dest = IPv4Header->src;
+					if (*(UINT32*)&ResponseIPHeader->dest == INADDR_ANY)
+						inet_pton(AF_INET, "255.255.255.255", &ResponseIPHeader->dest);
+
+					struct udphdr* ResponseUDPHeader = (struct udphdr*)((BYTE*)ResponseIPHeader + sizeof(struct iphdr));
+					ResponseUDPHeader->srcport = htons(67);
+					ResponseUDPHeader->dstport = htons(UDPSrcPort);
+
+					BYTE* ResponseDHCPPacket = (BYTE*)ResponseUDPHeader + sizeof(struct udphdr);
+					ResponseDHCPPacket[0] = 2; // Boot Reply
+					ResponseDHCPPacket[1] = 1; // Type Ethernet
+					ResponseDHCPPacket[2] = 6; // HW Address Length
+					ResponseDHCPPacket[3] = 0; // Hops
+					*(UINT32*)(ResponseDHCPPacket + 4) = TransactionID; // Copy Transaction ID
+					if (*(UINT32*)&ResponseIPHeader->dest == INADDR_ANY)
+						*(UINT16*)(ResponseDHCPPacket + 10) = htons(0x8000); // broadcast flags
+					*(struct in_addr*)(ResponseDHCPPacket + 12) = IPv4Header->src;	// Client IP
+					*(struct in_addr*)(ResponseDHCPPacket + 16) = this->IPv4_Address;	// Assigned IP
+					inet_pton(AF_INET, "10.0.0.0", (struct in_addr*)(ResponseDHCPPacket + 20)); // Server IP
+					inet_pton(AF_INET, "0.0.0.0", (struct in_addr*)(ResponseDHCPPacket + 24)); // Relay Agent
+					memcpy(ResponseDHCPPacket + 28, FromMAC, 6); // Client MAC
+					
+					*(DWORD*)(ResponseDHCPPacket + 236) = htonl(0x63825363); // Magic Cookie
+					BYTE* Option = ResponseDHCPPacket + 240;
+
+					Option[0] = 53;	// Message Type (I Assume it is the first option in the request)
+					Option[1] = 1;		// Length 1
+					if (Payload[242] == 1) // DISCOVER
+						Option[2] = 2;	// OFFER
+					else // REQUEST/INFORM
+						Option[2] = 5;	// ACK
+					Option += 3;
+
+					Option[0] = 54;
+					Option[1] = 4;
+					*(DWORD*)(Option + 2) = *(DWORD*)&ResponseIPHeader->dest;
+					Option += 6;
+					Option[0] = 51;
+					Option[1] = 4;
+					*(DWORD*)(Option + 2) = htonl(3700);
+					Option += 6;
+					Option[0] = 58;
+					Option[1] = 4;
+					*(DWORD*)(Option + 2) = htonl(3605);
+					Option += 6;
+					Option[0] = 59;
+					Option[1] = 4;
+					*(DWORD*)(Option + 2) = htonl(3600);
+					Option += 6;
+					Option[0] = 1;
+					Option[1] = 4;
+					*(DWORD*)(Option + 2) = htonl(0xFFFFFFFF<<(32-this->IPv4_PrefixLength));
+					Option += 6;
+					Option[0] = 0xFF;
+					Option += 1;
+
+					ResponseIPHeader->len = htons(Option - 14 - DHCPResponse);
+					ResponseUDPHeader->length = htons(Option - 34 - DHCPResponse);
+					ResponseIPHeader->chksum = (UINT16)ip_checksum(ResponseIPHeader, sizeof(struct iphdr));
+					OVERLAPPED ol = { 0 };
+					WriteFile(Device, DHCPResponse, Option - DHCPResponse, NULL, &ol);
+					printf("DHCP Request, answered locally\n");
+					return;
 				}
 			}
 		}
