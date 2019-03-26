@@ -94,72 +94,86 @@ typedef struct AES256KEYBLOB_ {
 DWORD Crypto::AES256_Decrypt(BYTE* Buffer, DWORD Length, BYTE* Key)
 {
 	HCRYPTPROV hProv = 0;
-	if (!CryptAcquireContext(&hProv, NULL, 0, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
-	{
-		printf("CryptAcquireContext failed: %d\n", GetLastError());
-		return 0;
-	}
-	HCRYPTKEY hKey;
-	AES256KEYBLOB AESBlob;
-	AESBlob.bhHdr.bType = PLAINTEXTKEYBLOB;
-	AESBlob.bhHdr.bVersion = CUR_BLOB_VERSION;
-	AESBlob.bhHdr.reserved = 0;
-	AESBlob.bhHdr.aiKeyAlg = CALG_AES_256;
-	AESBlob.dwKeySize = 32;
-	memcpy(AESBlob.szBytes, Key, 32);
-	if (!CryptImportKey(hProv, (BYTE*)&AESBlob, sizeof(AESBlob), 0, CRYPT_EXPORTABLE, &hKey))
-	{
-		printf("CryptImportKey failed: %d\n", GetLastError());
-		CryptReleaseContext(hProv, 0);
-		return 0;
-	}
+	try {
+		if (!CryptAcquireContext(&hProv, NULL, 0, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+		{
+			printf("CryptAcquireContext failed: %d\n", GetLastError());
+			return 0;
+		}
+		HCRYPTKEY hKey;
+		AES256KEYBLOB AESBlob;
+		AESBlob.bhHdr.bType = PLAINTEXTKEYBLOB;
+		AESBlob.bhHdr.bVersion = CUR_BLOB_VERSION;
+		AESBlob.bhHdr.reserved = 0;
+		AESBlob.bhHdr.aiKeyAlg = CALG_AES_256;
+		AESBlob.dwKeySize = 32;
+		memcpy(AESBlob.szBytes, Key, 32);
+		if (!CryptImportKey(hProv, (BYTE*)&AESBlob, sizeof(AESBlob), 0, CRYPT_EXPORTABLE, &hKey))
+		{
+			printf("CryptImportKey failed: %d\n", GetLastError());
+			CryptReleaseContext(hProv, 0);
+			return 0;
+		}
 
-	if (!CryptDecrypt(hKey, NULL, TRUE, 0, Buffer, &Length)) {
-		printf("CryptDecrypt failed: %d\n", GetLastError());
-		LPSTR messageBuffer = nullptr;
-		size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
-		printf("%s\n", messageBuffer);
-		LocalFree(messageBuffer);
+		if (!CryptDecrypt(hKey, NULL, TRUE, 0, Buffer, &Length)) {
+			printf("CryptDecrypt failed: %d\n", GetLastError());
+			LPSTR messageBuffer = nullptr;
+			size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+			printf("%s\n", messageBuffer);
+			LocalFree(messageBuffer);
+			CryptReleaseContext(hProv, 0);
+			return 0;
+		}
+		CryptReleaseContext(hProv, 0);
+	}
+	catch (Crypto)
+	{
 		CryptReleaseContext(hProv, 0);
 		return 0;
 	}
-	CryptReleaseContext(hProv, 0);
 	return Length;
 }
 DWORD Crypto::AES256_Encrypt(BYTE* Buffer, DWORD Length, BYTE* Key)
 {
 	HCRYPTPROV hProv = 0;
-	if (!CryptAcquireContext(&hProv, NULL, 0, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
-	{
-		printf("CryptAcquireContext failed: %d\n", GetLastError());
-		return 0;
-	}
-	HCRYPTKEY hKey;
-	AES256KEYBLOB AESBlob;
-	AESBlob.bhHdr.bType = PLAINTEXTKEYBLOB;
-	AESBlob.bhHdr.bVersion = CUR_BLOB_VERSION;
-	AESBlob.bhHdr.reserved = 0;
-	AESBlob.bhHdr.aiKeyAlg = CALG_AES_256;
-	AESBlob.dwKeySize = 32;
-	memcpy(AESBlob.szBytes, Key, 32);
-	if (!CryptImportKey(hProv, (BYTE*)&AESBlob, sizeof(AESBlob), 0, CRYPT_EXPORTABLE, &hKey))
-	{
-		printf("CryptImportKey failed: %d\n", GetLastError());
-		CryptReleaseContext(hProv, 0);
-		return 0;
-	}
+	try {
+		if (!CryptAcquireContext(&hProv, NULL, 0, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+		{
+			printf("CryptAcquireContext failed: %d\n", GetLastError());
+			return 0;
+		}
+		HCRYPTKEY hKey;
+		AES256KEYBLOB AESBlob;
+		AESBlob.bhHdr.bType = PLAINTEXTKEYBLOB;
+		AESBlob.bhHdr.bVersion = CUR_BLOB_VERSION;
+		AESBlob.bhHdr.reserved = 0;
+		AESBlob.bhHdr.aiKeyAlg = CALG_AES_256;
+		AESBlob.dwKeySize = 32;
+		memcpy(AESBlob.szBytes, Key, 32);
+		if (!CryptImportKey(hProv, (BYTE*)&AESBlob, sizeof(AESBlob), 0, CRYPT_EXPORTABLE, &hKey))
+		{
+			printf("CryptImportKey failed: %d\n", GetLastError());
+			CryptReleaseContext(hProv, 0);
+			return 0;
+		}
 
-	if (!CryptEncrypt(hKey, NULL, TRUE, 0, Buffer, &Length, Length+32)) {
-		printf("CryptEncrypt failed: %d\n", GetLastError());
-		LPSTR messageBuffer = nullptr;
-		size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
-		printf("%s\n", messageBuffer);
-		LocalFree(messageBuffer);
+		if (!CryptEncrypt(hKey, NULL, TRUE, 0, Buffer, &Length, Length+32)) {
+			printf("CryptEncrypt failed: %d\n", GetLastError());
+			LPSTR messageBuffer = nullptr;
+			size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+			printf("%s\n", messageBuffer);
+			LocalFree(messageBuffer);
+			CryptReleaseContext(hProv, 0);
+			return 0;
+		}
+		CryptReleaseContext(hProv, 0);
+	}
+	catch (Crypto)
+	{
 		CryptReleaseContext(hProv, 0);
 		return 0;
 	}
-	CryptReleaseContext(hProv, 0);
 	return Length;
 }
