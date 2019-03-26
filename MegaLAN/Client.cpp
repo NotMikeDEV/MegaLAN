@@ -258,6 +258,8 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		Shell_NotifyIcon(NIM_ADD, &trayIcon);
 		SetTimer(hWnd, 0, 300000, NULL);
 		SetTimer(hWnd, 1, 1000, NULL);
+		SetTimer(hWnd, 2, 30000, NULL);
+		PostMessage(hWnd, WM_TIMER, 2, 0);
 
 		const LPCWSTR Software = L"Software";
 		HKEY Key, MyKey;
@@ -364,7 +366,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 						if (Me->PeerList[Selected].Addresses[plvdi->item.iItem].State > 0)
 						{
 							static WCHAR Latency[10];
-							wsprintf(Latency, L"%dms", htons(Me->PeerList[Selected].Addresses[plvdi->item.iItem].Latency));
+							wsprintf(Latency, L"%dms", Me->PeerList[Selected].Addresses[plvdi->item.iItem].Latency);
 							plvdi->item.pszText = (LPWSTR)Latency;
 						}
 						else
@@ -454,6 +456,65 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				ListView_SetItemCount(GetDlgItem(hWnd, IDC_PEERADDR), 0);
 			ListView_Update(GetDlgItem(hWnd, IDC_PEERADDR), 0);
 			ListView_Update(GetDlgItem(hWnd, IDC_PEERS), 0);
+		}
+		if (wParam == 2)
+		{
+			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
+			PIP_ADAPTER_ADDRESSES pAddressIP = (PIP_ADAPTER_ADDRESSES)malloc(sizeof(IP_ADAPTER_ADDRESSES));;
+			ULONG ulOutBufLen = sizeof(IP_ADAPTER_ADDRESSES);
+			// Get required buffer size
+			if (pAddressIP && GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_INTERFACES, NULL, pAddressIP, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
+			{
+				free(pAddressIP);
+				pAddressIP = (PIP_ADAPTER_ADDRESSES)malloc(ulOutBufLen);
+			}
+			if (pAddressIP == NULL) {
+				return FALSE;
+			}
+			if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_INTERFACES, NULL, pAddressIP, &ulOutBufLen) == NO_ERROR)
+			{
+				PIP_ADAPTER_ADDRESSES IP = pAddressIP;
+				while (IP)
+				{
+					WCHAR Name[256];
+					MultiByteToWideChar(CP_THREAD_ACP, 0, IP->AdapterName, -1, Name, 256);
+					if (NICs.SelectedNIC.ID.compare(Name))
+					{
+						PIP_ADAPTER_UNICAST_ADDRESS Addr = IP->FirstUnicastAddress;
+						while (Addr)
+						{
+							if (Addr->Address.lpSockaddr->sa_family == AF_INET)
+							{
+								struct in_addr Broadcast = { 0 };
+								memcpy(&Broadcast, &((struct sockaddr_in*)Addr->Address.lpSockaddr)->sin_addr, 4);
+								*(UINT32*)&Broadcast |= 0xFFFFFFFF << Addr->OnLinkPrefixLength;
+								char IP[128];
+								inet_ntop(AF_INET, &Broadcast, IP, sizeof(IP));
+								if (Addr->PreferredLifetime > 0)
+								{
+									struct sockaddr_in6 Address = { 0 };
+									Address.sin6_family = AF_INET6;
+									char IP[128] = { 0 };
+									strcpy_s(IP, "::ffff:");
+									inet_ntop(AF_INET, &Broadcast, IP+7, sizeof(IP)-7);
+									printf("%s\n", IP);
+									inet_pton(AF_INET6, IP, &Address.sin6_addr);
+									Address.sin6_port = htons(500);
+									BYTE Buffer[100];
+									memcpy(Buffer, "INIT", 4);
+									memcpy(Buffer + 4, Socket.AuthID, 20);
+									memcpy(Buffer + 24, Me->MyMAC, 6);
+									Socket.SendToPeer(Address, Buffer, 30);
+								}
+							}
+							Addr = Addr->Next;
+						}
+					}
+					IP = IP->Next;
+				}
+			}
+
+			free(pAddressIP);
 		}
 	}
 	break;
@@ -626,6 +687,8 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 	}
 	if (memcmp(Packet.buffer, "PONG", 4) == 0)
 	{
+		if (memcmp(Socket.AuthID, Packet.buffer + 4, 20) == 0 && memcmp(Packet.buffer + 24, MyMAC, 6) == 0)
+			return;
 		for (auto &P : PeerList)
 		{
 			if (memcmp(P.UserID, Packet.buffer + 4, 20) == 0 && memcmp(P.MAC, Packet.buffer+24, 6) == 0)
@@ -731,7 +794,7 @@ void Client::ReadPacket(BYTE* Buffer, WORD len)
 					ResponseIPHeader->verhdrlen = 0x45;
 					ResponseIPHeader->ident = 0xF00D;
 					ResponseIPHeader->frags = 0;
-					ResponseIPHeader->ttl = 2;
+					ResponseIPHeader->ttl = 64;
 					ResponseIPHeader->protocol = 0x11;
 					inet_pton(AF_INET, "10.0.0.0", &ResponseIPHeader->src);
 					ResponseIPHeader->dest = IPv4Header->src;

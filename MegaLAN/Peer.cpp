@@ -7,6 +7,12 @@ Peer::Peer(BYTE* UserID, BYTE* MAC)
 	memcpy(this->MAC, MAC, 6);
 	this->PreferredAddress = NULL;
 	this->Timeout = GetTickCount64() + 70000;
+	printf("New Peer ");
+	for (int x = 0; x < 20; x++)
+		printf("%02X", this->UserID[x]);
+	for (int x = 0; x < 6; x++)
+		printf(":%02X", this->MAC[x]);
+	printf("\n");
 }
 
 bool Peer::operator==(Peer &Other)
@@ -36,6 +42,12 @@ void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port)
 	Addresses.push_back(Info);
 	char IP[128];
 	inet_ntop(AF_INET6, &Info.Address.sin6_addr, IP, sizeof(IP));
+	printf("Register IP for ");
+	for (int x = 0; x < 20; x++)
+		printf("%02X", this->UserID[x]);
+	for (int x = 0; x < 20; x++)
+		printf(":%02X", this->UserID[x]);
+	printf("\n");
 }
 
 void Peer::Poll()
@@ -59,6 +71,8 @@ void Peer::Poll()
 			if (Addresses[index].State == 0)
 			{
 				memcpy(Buffer, "INIT", 4);
+				memcpy(Buffer + 4, Socket.AuthID, 20);
+				memcpy(Buffer + 24, VPNClient->MyMAC, 6);
 				Socket.SendToPeer(Addresses[index].Address, Buffer, 30);
 			}
 			Addresses[index].LastCheckTime = Time;

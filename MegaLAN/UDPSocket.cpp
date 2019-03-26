@@ -87,7 +87,9 @@ void UDPSocket::SocketEventMessage()
 	{
 		if (ret = Crypt.AES256_Decrypt(Buffer, ret, AuthKey))
 		{
-			printf("Recv %u bytes from server\n", ret);
+			char Type[5] = { 0 };
+			memcpy(Type, Buffer, 4);
+			printf("Recv %u byte %s from server\n", ret, Type);
 			for (int x = 0; x < ret; x++)
 				printf("%02X ", (BYTE)Buffer[x]);
 			printf("\n");
@@ -104,7 +106,9 @@ void UDPSocket::SocketEventMessage()
 		{
 			char IP[128];
 			inet_ntop(AF_INET6, &from.sin6_addr, IP, sizeof(IP));
-			printf("Recv %u bytes from peer %s %u\n", ret, IP, htons(from.sin6_port));
+			char Type[5] = { 0 };
+			memcpy(Type, Buffer, 4);
+			printf("Recv %u byte %s from peer %s %u\n", ret, Type, IP, htons(from.sin6_port));
 			for (int x = 0; x < ret; x++)
 				printf("%02X ", (BYTE)Buffer[x]);
 			printf("\n");
