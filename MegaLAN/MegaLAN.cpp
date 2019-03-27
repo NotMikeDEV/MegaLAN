@@ -288,7 +288,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_USER + 100:
 		Socket.SocketEventMessage();
 		break;
-	case WM_USER + 101:
+	case WM_USER + 0xFF:
 		Socket.LANSocketEventMessage();
 		break;
 	case WM_TIMER:

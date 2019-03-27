@@ -44,9 +44,9 @@ void UDPSocket::Start()
 	LANSocket = socket(AF_INET6, SOCK_DGRAM, 0);
 	val = 0;
 	setsockopt(LANSocket, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&val, sizeof(val));
-	if (bind(LANSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == 0)
+	if (val = bind(LANSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == 0)
 	{
-		WSAAsyncSelect(LANSocket, hWnd, WM_USER + 101, FD_READ);
+		WSAAsyncSelect(LANSocket, hWnd, WM_USER + 0xFF, FD_READ);
 	}
 }
 
@@ -57,7 +57,7 @@ void UDPSocket::LANSocketEventMessage()
 	int fromlen = sizeof(from);
 	unsigned char Buffer[4096];
 	memset(Buffer, 0, sizeof(Buffer));
-	int ret = recvfrom(Socket, (char*)Buffer, sizeof(Buffer), 0, (sockaddr*)&from, &fromlen);
+	int ret = recvfrom(LANSocket, (char*)Buffer, sizeof(Buffer), 0, (sockaddr*)&from, &fromlen);
 
 	if (VPNClient && (ret = Crypt.AES256_Decrypt(Buffer, ret, p2pKey)))
 	{
@@ -193,6 +193,7 @@ void UDPSocket::Setp2pKey(BYTE* Key)
 {
 	memcpy(p2pKey, Key, sizeof(p2pKey));
 }
+
 void UDPSocket::SendToPeer(struct sockaddr_in6 &Addr, BYTE* Payload, int PayloadLength)
 {
 	BYTE Buffer[4096] = { 0 };

@@ -110,7 +110,7 @@ void Peer::Poll()
 			PreferredAddress = &Addresses[index];
 			LowestLatency = Addresses[index].Latency;
 		}
-		if (Time - Addresses[index].LastRecvTime > 120000 && PreferredAddress)
+		if (Time - Addresses[index].LastRecvTime > 120000 && Time - Addresses[index].LastCheckTime > 5 && PreferredAddress)
 		{
 			Addresses.erase(Addresses.begin() + index);
 			index--;

@@ -456,16 +456,18 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		{
 			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
 			if (!Me) return FALSE;
-			for (auto it = Me->PeerList.begin(); it < Me->PeerList.end(); it++)
+			for (auto it = Me->PeerList.begin(); it < Me->PeerList.end(); )
 			{
 				if (it->Timeout < GetTickCount64())
 				{
 					Me->PeerList.erase(it);
-					if (it != Me->PeerList.begin())
-						it--;
+					it = Me->PeerList.begin();
 				}
 				else
+				{
 					it->Poll();
+					it++;
+				}
 			}
 			ListView_SetItemCount(GetDlgItem(hWnd, IDC_PEERS), Me->PeerList.size());
 			int Selected = ListView_GetNextItem(GetDlgItem(hWnd, IDC_PEERS), -1, LVNI_SELECTED);
