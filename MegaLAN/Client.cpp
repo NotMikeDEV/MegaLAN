@@ -519,7 +519,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 									inet_ntop(AF_INET, &Broadcast, IP+7, sizeof(IP)-7);
 									printf("%s\n", IP);
 									inet_pton(AF_INET6, IP, &Address.sin6_addr);
-									Address.sin6_port = htons(500);
+									Address.sin6_port = htons(55500);
 									BYTE Buffer[100];
 									memcpy(Buffer, "LAND", 4);
 									memcpy(Buffer + 4, Me->ID, 20);
