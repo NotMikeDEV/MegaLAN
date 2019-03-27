@@ -46,6 +46,9 @@
     <Content Include="app.lua" />
     <Content Include="www\create_vlan\index.php" />
     <Content Include="www\Database.php" />
+    <Content Include="www\info.php">
+      <SubType>Code</SubType>
+    </Content>
     <Content Include="www\password\index.php" />
     <Content Include="www\register\index.php" />
     <Content Include="www\favicon.ico" />

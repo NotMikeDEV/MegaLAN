@@ -19,7 +19,7 @@ function ExecRemote(server, cmd) {
 function PushRemote(server, local, remote) {
     try {
         var Output = execSync('scp -i ' + SSHKEY + ' -r ' + local + ' root@' + server + ':' + remote);
-        console.log(local, remote, Output.toString());
+        console.log(server, local, remote, Output.toString());
     } catch (E) {
         console.log("Push error", local, remote);
     }
@@ -30,4 +30,4 @@ function DoServer(server) {
 }
 DoServer("it.megalan.app");
 DoServer("la.megalan.app");
-DoServer("ch.megalan.app");
+DoServer("ny.megalan.app");
