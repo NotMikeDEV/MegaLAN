@@ -40,7 +40,7 @@ void UDPSocket::Start()
 	// LAN Discovery listener, fixed port.
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin6_family = AF_INET6;
-	server_addr.sin6_port = htons(55500);
+	server_addr.sin6_port = htons(LAN_DISCOVERY_PORT);
 	LANSocket = socket(AF_INET6, SOCK_DGRAM, 0);
 	val = 0;
 	setsockopt(LANSocket, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&val, sizeof(val));
