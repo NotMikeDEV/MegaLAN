@@ -8,7 +8,7 @@ var ServerName = args[0];
 
 var mysql = require('mysql');
 var database = mysql.createPool({
-    connectionLimit: 20,
+    connectionLimit: 50,
     host: 'localhost',
     user: 'MegaLAN',
     password: 'MegaLAN',
@@ -23,7 +23,7 @@ server.on('error', (err) => {
 setInterval(function(){
     database.query("DELETE FROM VLAN_Membership WHERE Time < ?", [Math.floor(new Date() / 1000) - 600]);
     database.query("DELETE FROM IP_Allocations WHERE Time < ?", [Math.floor(new Date() / 1000) - 3600]);
-}, 10000);
+}, 60000);
 server.on('message', (msg, rinfo) => {
 	var Buff = Buffer.from(msg);
 	var Type = Buff.slice(0,4);
@@ -173,111 +173,109 @@ server.on('message', (msg, rinfo) => {
 						if (Request.slice(0,7) != "LETMEIN")
 							throw "Invalid Decrypt";
 						var MAC = Request.slice(7, 13);
-                        database.query("DELETE FROM VLAN_Membership WHERE VLANID = ? AND UserID = ? AND MAC = ?", [vlans[0].VLANID, UserHash.toString('hex'), MAC.toString('hex')], function(err){
-							var IPCount = Request.readUInt8(13);
-							console.log(`Got ${IPCount} IPs from ${MAC.toString('hex')} FOR ${vlans[0].VLANID}:`);
-							for (var x=0; x<IPCount; x++)
-							{
-								var IPv6 = Request.slice(14+(18*x), 14+(18*x)+2).toString('hex');
-								for (var y=2; y<16; y+=2)
-									IPv6 += ":" + Request.slice(14+(18*x)+(y), 14+(18*x)+(y)+2).toString('hex')
-								var IP = IPAddr.parse(IPv6);
-								var Port = Request.readUInt16BE(14+(18*x)+16, 2);
-								console.log(IP.toString(), Port);
-                                database.query("INSERT INTO VLAN_Membership (VLANID, UserID, MAC, IP, Port, Time) VALUES (?, ?, ?, ?, ?, ?)", [vlans[0].VLANID, UserHash.toString('hex'), MAC.toString('hex'), IP.toString(), Port, Math.floor(new Date() / 1000)], function (err) { if (err) console.log(err);});
-							}
-							var VLANIPv4 = vlans[0].IPv4;
-							if (!VLANIPv4)
-								VLANIPv4 = "10.0.0.0/8";
-							var VLANIPv6 = vlans[0].IPv6;
-							if (!VLANIPv6)
-								VLANIPv6 = "fd00::/64";
-							var IPv4Subnet = IPAddr.createCIDR(VLANIPv4);
-							var IPv6Subnet = IPAddr.createCIDR(VLANIPv6);
-                            database.query("SELECT IPv4, IPv6 FROM IP_Allocations WHERE VLANID = ? AND MAC = ?", [vlans[0].VLANID, MAC.toString('hex')], function(err, allocation){
+						var IPCount = Request.readUInt8(13);
+						console.log(`Got ${IPCount} IPs from ${MAC.toString('hex')} FOR ${vlans[0].VLANID}:`);
+						for (var x=0; x<IPCount; x++)
+						{
+							var IPv6 = Request.slice(14+(18*x), 14+(18*x)+2).toString('hex');
+							for (var y=2; y<16; y+=2)
+								IPv6 += ":" + Request.slice(14+(18*x)+(y), 14+(18*x)+(y)+2).toString('hex')
+							var IP = IPAddr.parse(IPv6);
+							var Port = Request.readUInt16BE(14+(18*x)+16, 2);
+							console.log(IP.toString(), Port);
+                            database.query("INSERT INTO VLAN_Membership (VLANID, UserID, MAC, IP, Port, Time) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE Time = ?", [VLAN.toString('hex'), UserHash.toString('hex'), MAC.toString('hex'), IP.toString(), Port, Math.floor(new Date() / 1000), Math.floor(new Date() / 1000)], function (err, res) { console.log(err, res);});
+						}
+						var VLANIPv4 = vlans[0].IPv4;
+						if (!VLANIPv4)
+							VLANIPv4 = "10.0.0.0/8";
+						var VLANIPv6 = vlans[0].IPv6;
+						if (!VLANIPv6)
+							VLANIPv6 = "fd00::/64";
+						var IPv4Subnet = IPAddr.createCIDR(VLANIPv4);
+						var IPv6Subnet = IPAddr.createCIDR(VLANIPv6);
+                        database.query("SELECT IPv4, IPv6 FROM IP_Allocations WHERE VLANID = ? AND MAC = ?", [vlans[0].VLANID, MAC.toString('hex')], function(err, allocation){
+                            if (err)
+                                console.log(err);
+                            database.query("SELECT UserID, MAC, IP, Port FROM VLAN_Membership WHERE VLANID = ?", [vlans[0].VLANID], function (err, peers) {
                                 if (err)
                                     console.log(err);
-                                database.query("SELECT UserID, MAC, IP, Port FROM VLAN_Membership WHERE VLANID = ?", [vlans[0].VLANID], function (err, peers) {
+                                console.log("Sending " + peers.length + " VLAN messages", rinfo.port, rinfo.address);
+                                for (var x = 0; x < peers.length; x++)
+                                {
+                                    var IP = IPAddr.parse(peers[x].IP);
+                                    var CryptoKey = Buffer.from(user[0].CryptoHash, "hex");
+                                    var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
+                                    var encrypted = cipher.update(vlans[0].VLANID, 'hex', 'hex');
+                                    encrypted += cipher.update(peers[x].UserID, 'hex', 'hex');
+                                    encrypted += cipher.update(peers[x].MAC, 'hex', 'hex');
+                                    encrypted += cipher.update(IP.toBuffer().toString('hex'), 'hex', 'hex');
+                                    var Port = new Buffer(2);
+                                    Port.writeUInt16BE(peers[x].Port, 0);
+                                    encrypted += cipher.update(Port.toString('hex'), 'hex', 'hex');
+                                    encrypted += cipher.final('hex');
+                                    server.send(Buffer.concat([Buffer.from('VLAN'), Buffer.from(encrypted, 'hex')]), rinfo.port, rinfo.address);
+                                }
+							});
+							if (allocation.length)
+							{
+                                database.query("UPDATE IP_Allocations SET Time = ? WHERE VLANID = ? AND MAC = ?", [Math.floor(new Date() / 1000), vlans[0].VLANID, MAC.toString('hex')], function (err) { if (err) { console.log(err); }});
+								console.log("Already allocated " + allocation[0].IPv4 + " and " + allocation[0].IPv6);
+								var IPv4 = IPAddr.parse(allocation[0].IPv4);
+								var IPv6 = IPAddr.parse(allocation[0].IPv6);
+                                var CryptoKey = Buffer.from(user[0].CryptoHash, "hex");
+								var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
+								var encrypted = cipher.update(vlans[0].VLANID, 'hex', 'hex');
+								encrypted += cipher.update(IPv4.toBuffer().slice(12,16), 'hex', 'hex');
+								encrypted += cipher.update(Buffer.from([IPv4Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
+								encrypted += cipher.update(IPv6.toBuffer(), 'hex', 'hex');
+								encrypted += cipher.update(Buffer.from([IPv6Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
+								encrypted += cipher.final('hex');
+								server.send(Buffer.concat([Buffer.from('RGST'), Buffer.from(encrypted,'hex')]), rinfo.port, rinfo.address);
+							}
+							else
+							{
+                                database.query("SELECT MAC, IPv4, IPv6 FROM IP_Allocations WHERE VLANID = ?", [vlans[0].VLANID], function (err, allocations) {
                                     if (err)
                                         console.log(err);
-                                    console.log("Sending " + peers.length + " VLAN messages");
-                                    for (var x = 0; x < peers.length; x++)
-                                    {
-                                        var IP = IPAddr.parse(peers[x].IP);
-                                        var CryptoKey = Buffer.from(user[0].CryptoHash, "hex");
-                                        var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
-                                        var encrypted = cipher.update(vlans[0].VLANID, 'hex', 'hex');
-                                        encrypted += cipher.update(peers[x].UserID, 'hex', 'hex');
-                                        encrypted += cipher.update(peers[x].MAC, 'hex', 'hex');
-                                        encrypted += cipher.update(IP.toBuffer().toString('hex'), 'hex', 'hex');
-                                        var Port = new Buffer(2);
-                                        Port.writeUInt16BE(peers[x].Port, 0);
-                                        encrypted += cipher.update(Port.toString('hex'), 'hex', 'hex');
-                                        encrypted += cipher.final('hex');
-                                        server.send(Buffer.concat([Buffer.from('VLAN'), Buffer.from(encrypted, 'hex')]), rinfo.port, rinfo.address);
-                                    }
-								});
-								if (allocation.length)
-								{
-                                    database.query("UPDATE IP_Allocations SET Time = ? WHERE VLANID = ? AND MAC = ?", [Math.floor(new Date() / 1000), vlans[0].VLANID, MAC.toString('hex')], function (err) { if (err) { console.log(err); }});
-									console.log("Already allocated " + allocation[0].IPv4 + " and " + allocation[0].IPv6);
-									var IPv4 = IPAddr.parse(allocation[0].IPv4);
-									var IPv6 = IPAddr.parse(allocation[0].IPv6);
-                                    var CryptoKey = Buffer.from(user[0].CryptoHash, "hex");
-									var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
-									var encrypted = cipher.update(vlans[0].VLANID, 'hex', 'hex');
-									encrypted += cipher.update(IPv4.toBuffer().slice(12,16), 'hex', 'hex');
-									encrypted += cipher.update(Buffer.from([IPv4Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
-									encrypted += cipher.update(IPv6.toBuffer(), 'hex', 'hex');
-									encrypted += cipher.update(Buffer.from([IPv6Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
-									encrypted += cipher.final('hex');
-									server.send(Buffer.concat([Buffer.from('RGST'), Buffer.from(encrypted,'hex')]), rinfo.port, rinfo.address);
-								}
-								else
-								{
-                                    database.query("SELECT MAC, IPv4, IPv6 FROM IP_Allocations WHERE VLANID = ?", [vlans[0].VLANID], function (err, allocations) {
+									var IPv4_Taken = function(IP){
+										for (var x=0; x<allocations.length; x++)
+										{
+											if (allocations[x].IPv4 == IP.toString())
+												return true;
+										}
+										return false;
+									};
+									var IPv6_Taken = function(IP){
+										for (var x=0; x<allocations.length; x++)
+										{
+											if (allocations[x].IPv6 == IP.toString())
+												return true;
+										}
+										return false;
+									};
+
+									var IPv4=IPv4Subnet.first();
+									while (IPv4_Taken(IPv4))
+										IPv4 = IPv4.offset(1);
+									var IPv6=IPv6Subnet.first();
+									while (IPv6_Taken(IPv6))
+										IPv6 = IPv6.offset(1);
+                                    database.query("INSERT INTO IP_Allocations (VLANID, MAC, IPv4, IPv6, Time) VALUES (?,?,?,?,?)", [vlans[0].VLANID, MAC.toString('hex'), IPv4.toString(), IPv6.toString(), Math.floor(new Date() / 1000)], function(err){
                                         if (err)
                                             console.log(err);
-										var IPv4_Taken = function(IP){
-											for (var x=0; x<allocations.length; x++)
-											{
-												if (allocations[x].IPv4 == IP.toString())
-													return true;
-											}
-											return false;
-										};
-										var IPv6_Taken = function(IP){
-											for (var x=0; x<allocations.length; x++)
-											{
-												if (allocations[x].IPv6 == IP.toString())
-													return true;
-											}
-											return false;
-										};
-
-										var IPv4=IPv4Subnet.first();
-										while (IPv4_Taken(IPv4))
-											IPv4 = IPv4.offset(1);
-										var IPv6=IPv6Subnet.first();
-										while (IPv6_Taken(IPv6))
-											IPv6 = IPv6.offset(1);
-                                        database.query("INSERT INTO IP_Allocations (VLANID, MAC, IPv4, IPv6, Time) VALUES (?,?,?,?,?)", [vlans[0].VLANID, MAC.toString('hex'), IPv4.toString(), IPv6.toString(), Math.floor(new Date() / 1000)], function(err){
-                                            if (err)
-                                                console.log(err);
-											console.log("Allocating " + IPv4.toString() + " and " + IPv6.toString());
-                                            var CryptoKey = Buffer.from(user[0].CryptoHash, "hex");
-											var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
-											var encrypted = cipher.update(vlans[0].VLANID, 'hex', 'hex');
-											encrypted += cipher.update(IPv4.toBuffer().slice(12,16), 'hex', 'hex');
-											encrypted += cipher.update(Buffer.from([IPv4Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
-											encrypted += cipher.update(IPv6.toBuffer(), 'hex', 'hex');
-											encrypted += cipher.update(Buffer.from([IPv6Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
-											encrypted += cipher.final('hex');
-											server.send(Buffer.concat([Buffer.from('RGST'), Buffer.from(encrypted,'hex')]), rinfo.port, rinfo.address);
-										});
+										console.log("Allocating " + IPv4.toString() + " and " + IPv6.toString());
+                                        var CryptoKey = Buffer.from(user[0].CryptoHash, "hex");
+										var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
+										var encrypted = cipher.update(vlans[0].VLANID, 'hex', 'hex');
+										encrypted += cipher.update(IPv4.toBuffer().slice(12,16), 'hex', 'hex');
+										encrypted += cipher.update(Buffer.from([IPv4Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
+										encrypted += cipher.update(IPv6.toBuffer(), 'hex', 'hex');
+										encrypted += cipher.update(Buffer.from([IPv6Subnet.prefixLength()]).toString('hex'), 'hex', 'hex');
+										encrypted += cipher.final('hex');
+										server.send(Buffer.concat([Buffer.from('RGST'), Buffer.from(encrypted,'hex')]), rinfo.port, rinfo.address);
 									});
-								}
-							});
+								});
+							}
 						});
 					} catch(e) {
 						console.log(e);
