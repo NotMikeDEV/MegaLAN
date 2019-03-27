@@ -1,8 +1,4 @@
 #include "stdafx.h"
-#include <string>
-#include <codecvt>
-#include <locale>
-#include <vector>
 #include "Crypto.h"
 #include "MegaLAN.h"
 
@@ -346,12 +342,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 					break;
 					case 1:
 					{
-						CHAR IPv6c[128];
-						inet_ntop(AF_INET6, &Me->PeerList[Selected].Addresses[plvdi->item.iItem].Address.sin6_addr, IPv6c, sizeof(IPv6c));
-						std::wstring IPv6 = utf8_conv.from_bytes(IPv6c);
-						WCHAR IPv6s[128];
-						lstrcpyW(IPv6s, IPv6.c_str());
-						plvdi->item.pszText = (LPWSTR)IPv6s;
+						plvdi->item.pszText = (LPWSTR)Me->PeerList[Selected].Addresses[plvdi->item.iItem].IPString.c_str();
 					}
 					break;
 					case 2:

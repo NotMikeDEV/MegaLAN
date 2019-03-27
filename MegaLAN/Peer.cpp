@@ -37,16 +37,19 @@ void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port)
 			return;
 		}
 	}
-	struct PeerAddrInfo Info = { 0 };
+	PeerAddrInfo Info;
 	memcpy(&Info.Address, &Addr, sizeof(Addr));
-	Addresses.push_back(Info);
 	char IP[128];
 	inet_ntop(AF_INET6, &Info.Address.sin6_addr, IP, sizeof(IP));
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
+	Info.IPString = utf8_conv.from_bytes(IP) + L"..";
+	Addresses.push_back(Info);
+
 	printf("Register IP for ");
 	for (int x = 0; x < 20; x++)
 		printf("%02X", this->UserID[x]);
-	for (int x = 0; x < 20; x++)
-		printf(":%02X", this->UserID[x]);
+	for (int x = 0; x < 6; x++)
+		printf(":%02X", this->MAC[x]);
 	printf("\n");
 }
 
