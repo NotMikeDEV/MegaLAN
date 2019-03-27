@@ -7,6 +7,7 @@
 
 void UDPSocket::Start()
 {
+	// Bind to dynamic port
 	WSADATA WSAData;
 	memset(&WSAData, 0, sizeof(WSAData));
 	WSAData.iMaxSockets = 10000;
@@ -18,7 +19,7 @@ void UDPSocket::Start()
 
 	struct sockaddr_in6 server_addr = { 0 };
 	server_addr.sin6_family = AF_INET6;
-	server_addr.sin6_port = htons(55500);
+	server_addr.sin6_port = htons(0);
 
 	Socket = socket(AF_INET6, SOCK_DGRAM, 0);
 	int val = 0;
@@ -35,8 +36,46 @@ void UDPSocket::Start()
 	getsockname(Socket, (struct sockaddr *)&server_addr, &addrlen);
 	this->Port = htons(server_addr.sin6_port);
 	WSAAsyncSelect(Socket, hWnd, WM_USER + 100, FD_READ);
+
+	// LAN Discovery listener, fixed port.
+	memset(&server_addr, 0, sizeof(server_addr));
+	server_addr.sin6_family = AF_INET6;
+	server_addr.sin6_port = htons(55500);
+	LANSocket = socket(AF_INET6, SOCK_DGRAM, 0);
+	val = 0;
+	setsockopt(LANSocket, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&val, sizeof(val));
+	if (bind(LANSocket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == 0)
+	{
+		WSAAsyncSelect(LANSocket, hWnd, WM_USER + 101, FD_READ);
+	}
 }
 
+void UDPSocket::LANSocketEventMessage()
+{
+	struct sockaddr_in6 from = { 0 };
+	from.sin6_family = AF_INET6;
+	int fromlen = sizeof(from);
+	unsigned char Buffer[4096];
+	memset(Buffer, 0, sizeof(Buffer));
+	int ret = recvfrom(Socket, (char*)Buffer, sizeof(Buffer), 0, (sockaddr*)&from, &fromlen);
+
+	if (VPNClient && (ret = Crypt.AES256_Decrypt(Buffer, ret, p2pKey)))
+	{
+		char IP[128];
+		inet_ntop(AF_INET6, &from.sin6_addr, IP, sizeof(IP));
+		char Type[5] = { 0 };
+		memcpy(Type, Buffer, 4);
+		printf("Recv %u byte %s from peer %s %u on LAN discovery port\n", ret, Type, IP, htons(from.sin6_port));
+		for (int x = 0; x < ret; x++)
+			printf("%02X ", (BYTE)Buffer[x]);
+		printf("\n");
+		struct InboundUDP PacketInfo;
+		PacketInfo.addr = from;
+		PacketInfo.len = ret;
+		PacketInfo.buffer = Buffer;
+		VPNClient->RecvPacket(PacketInfo);
+	}
+}
 void UDPSocket::SocketEventMessage()
 {
 	struct sockaddr_in6 from = { 0 };

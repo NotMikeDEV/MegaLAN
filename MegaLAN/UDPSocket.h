@@ -9,6 +9,7 @@ class UDPSocket
 private:
 	WORD Port;
 	SOCKET Socket;
+	SOCKET LANSocket;
 	HWND p2pWindow = NULL;
 	BYTE AuthKey[32];
 	BYTE p2pKey[32];
@@ -17,6 +18,7 @@ public:
 	BYTE AuthID[20];
 	void Start();
 	void SocketEventMessage();
+	void LANSocketEventMessage();
 	void SetServer(struct sockaddr_in6* Address);
 	void SetAuthID(BYTE* Key);
 	void SetAuthKey(BYTE* Key);

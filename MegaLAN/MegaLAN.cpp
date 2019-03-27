@@ -288,6 +288,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_USER + 100:
 		Socket.SocketEventMessage();
 		break;
+	case WM_USER + 101:
+		Socket.LANSocketEventMessage();
+		break;
 	case WM_TIMER:
 		Socket.SendToServer((char*)"LIST", (BYTE*)&ListLoadPoint, 4);
 		break;
