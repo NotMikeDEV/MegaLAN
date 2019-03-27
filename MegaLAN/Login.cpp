@@ -73,7 +73,7 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			SHELLEXECUTEINFO info = { 0 };
 			info.cbSize = sizeof(info);
 			info.hwnd = hDlg;
-			info.lpFile = L"https://account.megalan.app/register/";
+			info.lpFile = L"https://megalan.app/register/";
 			bool child = ShellExecuteEx(&info);
 			if (child) {
 				WaitForSingleObject(info.hProcess, INFINITE);
@@ -85,7 +85,7 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			SHELLEXECUTEINFO info = { 0 };
 			info.cbSize = sizeof(info);
 			info.hwnd = hDlg;
-			info.lpFile = L"https://account.megalan.app/password/";
+			info.lpFile = L"https://megalan.app/password/";
 			bool child = ShellExecuteEx(&info);
 			if (child && info.hProcess) {
 				WaitForSingleObject(info.hProcess, INFINITE);
