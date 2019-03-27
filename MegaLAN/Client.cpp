@@ -251,8 +251,13 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		inet_ntop(AF_INET, &SetMe->IPv4_Address, IPv4, sizeof(IPv4));
 		char IPv6[128];
 		inet_ntop(AF_INET6, &SetMe->IPv6_Address, IPv6, sizeof(IPv6));
-		sprintf_s(IPString, sizeof(IPString), "IPv4: %s\nIPv6: %s\nMAC: %02X:%02X:%02X:%02X:%02X:%02X", IPv4, IPv6,
+		sprintf_s(IPString, sizeof(IPString), "IPv4: %s\nIPv6: %s\nMAC: %02X:%02X:%02X:%02X:%02X:%02X\n", IPv4, IPv6,
 			SetMe->MyMAC[0], SetMe->MyMAC[1], SetMe->MyMAC[2], SetMe->MyMAC[3], SetMe->MyMAC[4], SetMe->MyMAC[5]);
+		for (auto &A : MyExternalAddresses)
+		{
+			inet_ntop(AF_INET6, &A.sin6_addr, IPv6, sizeof(IPv6));
+			sprintf_s(IPString + strlen(IPString), sizeof(IPString) - strlen(IPString), "IP: %s (%u)\n", IPv6, htons(A.sin6_port));
+		}
 		SetWindowTextA(GetDlgItem(hWnd, IDC_IPv4), IPString);
 
 		trayIcon.hWnd = hWnd;

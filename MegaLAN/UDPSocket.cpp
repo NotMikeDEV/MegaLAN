@@ -244,6 +244,7 @@ void UDPSocket::SendLogin(std::wstring Username, std::wstring Password)
 	}
 	if (pResult)
 		FreeAddrInfoW(pResult);
+	MyExternalAddresses.clear();
 }
 
 UDPSocket::~UDPSocket()
