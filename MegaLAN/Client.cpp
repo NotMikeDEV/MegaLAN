@@ -502,9 +502,10 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 									Address.sin6_port = htons(500);
 									BYTE Buffer[100];
 									memcpy(Buffer, "INIT", 4);
-									memcpy(Buffer + 4, Socket.AuthID, 20);
-									memcpy(Buffer + 24, Me->MyMAC, 6);
-									Socket.SendToPeer(Address, Buffer, 30);
+									memcpy(Buffer + 4, Me->ID, 20);
+									memcpy(Buffer + 24, Socket.AuthID, 20);
+									memcpy(Buffer + 44, Me->MyMAC, 6);
+									Socket.SendToPeer(Address, Buffer, 50);
 								}
 							}
 							Addr = Addr->Next;
@@ -597,6 +598,8 @@ void Client::RecvPacketFromServer(struct InboundUDP &Packet)
 	}
 	if (memcmp(Packet.buffer, "VLAN", 4) == 0)
 	{
+		if (memcmp(ID, Packet.buffer + 4, 20) != 0)
+			return;
 		if (memcmp(Socket.AuthID, Packet.buffer + 24, 20) == 0 && memcmp(Packet.buffer + 44, MyMAC, 6) == 0)
 			return;
 		Peer NewPeer(Packet.buffer + 24, Packet.buffer + 44);
@@ -650,9 +653,11 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 	}
 	if (memcmp(Packet.buffer, "PING", 4) == 0 || memcmp(Packet.buffer, "INIT", 4) == 0)
 	{
-		if (memcmp(Socket.AuthID, Packet.buffer + 4, 20) == 0 && memcmp(Packet.buffer + 24, MyMAC, 6) == 0)
+		if (memcmp(ID, Packet.buffer + 4, 20) != 0)
 			return;
-		RegisterPeer(Packet.buffer + 4, Packet.buffer + 24, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port));
+		if (memcmp(Socket.AuthID, Packet.buffer + 24, 20) == 0 && memcmp(Packet.buffer + 44, MyMAC, 6) == 0)
+			return;
+		RegisterPeer(Packet.buffer + 24, Packet.buffer + 44, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port));
 
 		if (memcmp(Packet.buffer, "PING", 4) == 0)
 		{
@@ -691,15 +696,18 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 			return;
 		for (auto &P : PeerList)
 		{
-			if (memcmp(P.UserID, Packet.buffer + 4, 20) == 0 && memcmp(P.MAC, Packet.buffer+24, 6) == 0)
-				P.Pong(Packet.addr);
-		}
-		if (Packet.len >= 32)
-		{
-			UINT Count = htons(*(UINT16*)(Packet.buffer + 30));
-			for (int x = 0; x < Count && (Count * 44 + 6) <= Packet.len; x++)
+			if (memcmp(P.UserID, Packet.buffer + 4, 20) == 0 && memcmp(P.MAC, Packet.buffer + 24, 6) == 0)
 			{
-				RegisterPeer(Packet.buffer + 32 + (x * 44), Packet.buffer + 32 + (x * 44) + 20, *(struct in6_addr*)(Packet.buffer + 32 + (x * 44) + 26), htons(*(UINT*)(Packet.buffer + 32 + (x * 44) + 42)));
+				P.Pong(Packet.addr);
+				if (Packet.len >= 32)
+				{
+					UINT Count = htons(*(UINT16*)(Packet.buffer + 30));
+					for (int x = 0; x < Count && (Count * 44 + 6) <= Packet.len; x++)
+					{
+						RegisterPeer(Packet.buffer + 32 + (x * 44), Packet.buffer + 32 + (x * 44) + 20, *(struct in6_addr*)(Packet.buffer + 32 + (x * 44) + 26), htons(*(UINT*)(Packet.buffer + 32 + (x * 44) + 42)));
+					}
+				}
+				return;
 			}
 		}
 	}

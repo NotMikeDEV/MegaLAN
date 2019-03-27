@@ -49,7 +49,6 @@ private:
 	HWND hDlg = NULL;
 	HWND hWnd = NULL;
 	std::wstring Name;
-	BYTE ID[20];
 	BYTE Key[32];
 	HANDLE Device = INVALID_HANDLE_VALUE;
 	HANDLE Thread = INVALID_HANDLE_VALUE;
@@ -59,6 +58,7 @@ private:
 	BYTE IPv6_PrefixLength = 64;
 	std::vector<Peer> PeerList;
 public:
+	BYTE ID[20];
 	BYTE MyMAC[6];
 	Client(BYTE* ID, std::wstring Name);
 	~Client();

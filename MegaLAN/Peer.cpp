@@ -65,15 +65,17 @@ void Peer::Poll()
 		{
 			BYTE Buffer[1024];
 			memcpy(Buffer, "PING", 4);
-			memcpy(Buffer + 4, Socket.AuthID, 20);
-			memcpy(Buffer + 24, VPNClient->MyMAC, 6);
-			Socket.SendToPeer(Addresses[index].Address, Buffer, 30);
+			memcpy(Buffer + 4, VPNClient->ID, 20);
+			memcpy(Buffer + 24, Socket.AuthID, 20);
+			memcpy(Buffer + 44, VPNClient->MyMAC, 6);
+			Socket.SendToPeer(Addresses[index].Address, Buffer, 50);
 			if (Addresses[index].State == 0)
 			{
 				memcpy(Buffer, "INIT", 4);
-				memcpy(Buffer + 4, Socket.AuthID, 20);
-				memcpy(Buffer + 24, VPNClient->MyMAC, 6);
-				Socket.SendToPeer(Addresses[index].Address, Buffer, 30);
+				memcpy(Buffer + 4, VPNClient->ID, 20);
+				memcpy(Buffer + 24, Socket.AuthID, 20);
+				memcpy(Buffer + 44, VPNClient->MyMAC, 6);
+				Socket.SendToPeer(Addresses[index].Address, Buffer, 50);
 			}
 			Addresses[index].LastCheckTime = Time;
 		}
@@ -94,9 +96,10 @@ void Peer::Poll()
 	{
 		BYTE Buffer[1024];
 		memcpy(Buffer, "PING", 4);
-		memcpy(Buffer + 4, Socket.AuthID, 20);
-		memcpy(Buffer + 24, VPNClient->MyMAC, 6);
-		Socket.SendToPeer(PreferredAddress->Address, Buffer, 30);
+		memcpy(Buffer + 4, VPNClient->ID, 20);
+		memcpy(Buffer + 24, Socket.AuthID, 20);
+		memcpy(Buffer + 44, VPNClient->MyMAC, 6);
+		Socket.SendToPeer(PreferredAddress->Address, Buffer, 50);
 		PreferredAddress->LastCheckTime = Time;
 	}
 }
