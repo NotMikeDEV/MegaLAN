@@ -216,25 +216,6 @@ server.on('message', (msg, rinfo) => {
                                     encrypted += cipher.final('hex');
                                     server.send(Buffer.concat([Buffer.from('VLAN'), Buffer.from(encrypted, 'hex')]), rinfo.port, rinfo.address);
                                     console.log("Advertising " + IP.toString() + " port " + peers[x].Port + " to " + user[0].UserID);
-                                    database.query("SELECT UserHash, CryptoHash FROM Accounts WHERE UserHash = ?", [peers[x].UserID], function (err, peer) {
-                                        if (err)
-                                            console.log(err);
-                                        if (peer && peer.length)
-                                        {
-                                            var CryptoKey = Buffer.from(peer[0].CryptoHash, "hex");
-                                            var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
-                                            var encrypted = cipher.update(vlans[0].VLANID, 'hex', 'hex');
-                                            encrypted += cipher.update(peer[0].UserHash, 'hex', 'hex');
-                                            encrypted += cipher.update(MAC.toString('hex'), 'hex', 'hex');
-                                            var UserIP = IPAddr.parse(rinfo.address);
-                                            encrypted += cipher.update(UserIP.toBuffer().toString('hex'), 'hex', 'hex');
-                                            var Port = new Buffer(2);
-                                            Port.writeUInt16BE(rinfo.port, 0);
-                                            encrypted += cipher.update(Port.toString('hex'), 'hex', 'hex');
-                                            encrypted += cipher.final('hex');
-                                            console.log("Advertising " + UserIP.toString() + " port " + rinfo.port + " to " + peer[0].UserHash);
-                                        }
-                                    });
                                 }
 							});
 							if (allocation.length)
