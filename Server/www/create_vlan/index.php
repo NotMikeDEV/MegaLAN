@@ -113,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST")
 			else
 			{
 				$db->Query("INSERT INTO VLANs (VLANID, Public) VALUES(:ID, :Public)", [
-				    ':ID'=>$VLANID,
-				    ':Public'=>(isset($_POST['Hidden']) && $_POST['Hidden'] == 'on')?0:1
+					':ID'=>$VLANID,
+					':Public'=>(isset($_POST['Hidden']) && $_POST['Hidden'] == 'on')?0:1
 				]);
 				$IPv4=isset($_POST['IPv4'])?$_POST['IPv4']:'';
 				if (!strlen($IPv4))
@@ -123,12 +123,12 @@ if ($_SERVER['REQUEST_METHOD'] == "POST")
 				if (!strlen($IPv6))
 					$IPv6="fd00::/64";
 				$db->Query("INSERT INTO VLAN_Info (VLANID, Name, Description, IPv4, IPv6, CryptoKey) VALUES(:ID, :Name, :Description, :IPv4, :IPv6, :CryptoKey)", [
-				    ':ID'=>$VLANID,
-				    ':Name'=>$_POST['Name'],
-				    ':Description'=>$_POST['Description'],
-				    ':IPv4'=>$IPv4,
-				    ':IPv6'=>$IPv6,
-				    ':CryptoKey'=>(isset($_POST['Password']) && strlen($_POST['Password']))?hash('sha256', $_POST['Password']):''
+					':ID'=>$VLANID,
+					':Name'=>$_POST['Name'],
+					':Description'=>$_POST['Description'],
+					':IPv4'=>$IPv4,
+					':IPv6'=>$IPv6,
+					':CryptoKey'=>(isset($_POST['Password']) && strlen($_POST['Password']))?hash('sha256', $_POST['Password']):''
 				]);
 				die("<h2>VLAN Created. You can now connect your client.</h2></body></html>");
 			}
