@@ -156,7 +156,7 @@ void Login::RecvPacket(struct InboundUDP &Packet)
 	EnableWindow(GetDlgItem(hDlg, IDC_FORGOT_PASSWORD), true);
 	KillTimer(hDlg, IDC_LOGIN);
 	printf("Login recv %d\n", Packet.len);
-	if (Packet.len >= 2 && memcmp(Packet.buffer, "OK", 2) == 0)
+	if (IsLoggingIn && Packet.len >= 2 && memcmp(Packet.buffer, "OK", 2) == 0)
 	{
 		IsLoggingIn = false;
 		IsAuthenticated = true;

@@ -234,27 +234,30 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		HIMAGELIST IMGLST = ImageList_Create(1, 50, 0, 0, 1);
 		ListView_SetImageList(GetDlgItem(hWnd, IDC_PEERS), IMGLST, LVSIL_NORMAL);
 		Client* SetMe = (Client*)lParam;
-		if (SetMe)
+		if (!SetMe)
 		{
-			ListView_SetItemCountEx(GetDlgItem(hWnd, IDC_PEERS), SetMe->PeerList.size(), LVSICF_NOSCROLL);
-			SetWindowLongPtr(hWnd, DWLP_USER, lParam);
-			SetMe->hWnd = hWnd;
-			SetWindowText(hWnd, SetMe->Name.c_str());
-			CHAR IPString[1024];
-			char IPv4[128];
-			inet_ntop(AF_INET, &SetMe->IPv4_Address, IPv4, sizeof(IPv4));
-			char IPv6[128];
-			inet_ntop(AF_INET6, &SetMe->IPv6_Address, IPv6, sizeof(IPv6));
-			sprintf_s(IPString, sizeof(IPString), "IPv4: %s\nIPv6: %s\nMAC: %02X:%02X:%02X:%02X:%02X:%02X", IPv4, IPv6,
-				SetMe->MyMAC[0], SetMe->MyMAC[1], SetMe->MyMAC[2], SetMe->MyMAC[3], SetMe->MyMAC[4], SetMe->MyMAC[5]);
-			SetWindowTextA(GetDlgItem(hWnd, IDC_IPv4), IPString);
+			EndDialog(hWnd, 0);
+			return FALSE;
 		}
+		ListView_SetItemCountEx(GetDlgItem(hWnd, IDC_PEERS), SetMe->PeerList.size(), LVSICF_NOSCROLL);
+		SetWindowLongPtr(hWnd, DWLP_USER, lParam);
+		SetMe->hWnd = hWnd;
+		SetWindowText(hWnd, SetMe->Name.c_str());
+		CHAR IPString[1024];
+		char IPv4[128];
+		inet_ntop(AF_INET, &SetMe->IPv4_Address, IPv4, sizeof(IPv4));
+		char IPv6[128];
+		inet_ntop(AF_INET6, &SetMe->IPv6_Address, IPv6, sizeof(IPv6));
+		sprintf_s(IPString, sizeof(IPString), "IPv4: %s\nIPv6: %s\nMAC: %02X:%02X:%02X:%02X:%02X:%02X", IPv4, IPv6,
+			SetMe->MyMAC[0], SetMe->MyMAC[1], SetMe->MyMAC[2], SetMe->MyMAC[3], SetMe->MyMAC[4], SetMe->MyMAC[5]);
+		SetWindowTextA(GetDlgItem(hWnd, IDC_IPv4), IPString);
+
 		trayIcon.hWnd = hWnd;
 		ShowWindow(::hWnd, SW_HIDE);
 		Shell_NotifyIcon(NIM_ADD, &trayIcon);
-		SetTimer(hWnd, 0, 300000, NULL);
+		SetTimer(hWnd, 0, 180000, NULL);
 		SetTimer(hWnd, 1, 1000, NULL);
-		SetTimer(hWnd, 2, 30000, NULL);
+		SetTimer(hWnd, 2, 10000, NULL);
 		PostMessage(hWnd, WM_TIMER, 2, 0);
 
 		const LPCWSTR Software = L"Software";
@@ -290,6 +293,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		if (lpnmh->code == LVN_GETDISPINFO)
 		{
 			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
+			if (!Me) return FALSE;
 			NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lParam;
 			if (lpnmh->hwndFrom == GetDlgItem(hWnd, IDC_PEERS))
 			{
@@ -342,7 +346,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 					break;
 					case 1:
 					{
-						plvdi->item.pszText = (LPWSTR)Me->PeerList[Selected].Addresses[plvdi->item.iItem].IPString.c_str();
+						plvdi->item.pszText = (LPWSTR)Me->PeerList[Selected].Addresses[plvdi->item.iItem].IPString;
 					}
 					break;
 					case 2:
@@ -391,6 +395,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		if (lpnmh->code == LVN_ITEMCHANGED)
 		{
 			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
+			if (!Me) return FALSE;
 			int Selected = ListView_GetNextItem(GetDlgItem(hWnd, IDC_PEERS), -1, LVNI_SELECTED);
 			WCHAR PeerInfo[1024] = { 0 };
 			if (Selected >= 0)
@@ -398,12 +403,12 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				wsprintf(PeerInfo, L"%s (%02X:%02X:%02X:%02X:%02X:%02X)", Me->PeerList[Selected].Name.c_str(),
 					Me->PeerList[Selected].MAC[0], Me->PeerList[Selected].MAC[1], Me->PeerList[Selected].MAC[2],
 					Me->PeerList[Selected].MAC[3], Me->PeerList[Selected].MAC[4], Me->PeerList[Selected].MAC[5]);
-				ListView_SetItemCount(GetDlgItem(hWnd, IDC_PEERADDR), Me->PeerList[Selected].Addresses.size());
+				SetWindowText(GetDlgItem(hWnd, IDC_SELECTED_PEER), PeerInfo);
+				PostMessage(hWnd, WM_TIMER, 1, 0);
 			}
 			else
 				ListView_SetItemCount(GetDlgItem(hWnd, IDC_PEERADDR), 0);
 			ListView_Update(GetDlgItem(hWnd, IDC_PEERADDR), 0);
-			SetWindowText(GetDlgItem(hWnd, IDC_SELECTED_PEER), PeerInfo);
 		}
 	}
 	break;
@@ -417,6 +422,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 	case WM_USER + 1:
 	{
 		Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
+		if (!Me) return FALSE;
 		Me->ReadPacket((BYTE*)lParam, wParam);
 	}
 	break;
@@ -425,19 +431,21 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		if (wParam == 0)
 		{
 			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
+			if (!Me) return FALSE;
 			Me->SendRegister();
 		}
 		if (wParam == 1)
 		{
 			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
-			for (int index = 0; index < Me->PeerList.size(); ++index)
+			if (!Me) return FALSE;
+			for (auto it = Me->PeerList.begin(); it < Me->PeerList.end(); it++)
 			{
-				Me->PeerList[index].Poll();
-				if (Me->PeerList[index].Timeout < GetTickCount64())
+				if (it->Timeout < GetTickCount64())
 				{
-					Me->PeerList.erase(Me->PeerList.begin() + index);
-					index--;
+					Me->PeerList.erase(it);
 				}
+				else
+					it->Poll();
 			}
 			ListView_SetItemCount(GetDlgItem(hWnd, IDC_PEERS), Me->PeerList.size());
 			int Selected = ListView_GetNextItem(GetDlgItem(hWnd, IDC_PEERS), -1, LVNI_SELECTED);
@@ -450,7 +458,9 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		}
 		if (wParam == 2)
 		{
+			SetTimer(hWnd, 2, 30000, NULL);
 			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
+			if (!Me) return FALSE;
 			PIP_ADAPTER_ADDRESSES pAddressIP = (PIP_ADAPTER_ADDRESSES)malloc(sizeof(IP_ADAPTER_ADDRESSES));;
 			ULONG ulOutBufLen = sizeof(IP_ADAPTER_ADDRESSES);
 			// Get required buffer size
@@ -492,7 +502,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 									inet_pton(AF_INET6, IP, &Address.sin6_addr);
 									Address.sin6_port = htons(500);
 									BYTE Buffer[100];
-									memcpy(Buffer, "INIT", 4);
+									memcpy(Buffer, "LAND", 4);
 									memcpy(Buffer + 4, Me->ID, 20);
 									memcpy(Buffer + 24, Socket.AuthID, 20);
 									memcpy(Buffer + 44, Me->MyMAC, 6);
@@ -514,7 +524,12 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 	{
 		if (wParam == IDC_DISCONNECT)
 		{
+			KillTimer(hWnd, 0);
+			KillTimer(hWnd, 1);
+			KillTimer(hWnd, 2);
+			EndDialog(hWnd, 0);
 			Client* Me = (Client*)GetWindowLongPtr(hWnd, DWLP_USER);
+			if (!Me) return FALSE;
 			Shell_NotifyIcon(NIM_DELETE, &trayIcon);
 			ShowWindow(::hWnd, SW_SHOW);
 			Me->hWnd = NULL;
@@ -525,7 +540,6 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			Me->Thread = INVALID_HANDLE_VALUE;
 			Me->Device = INVALID_HANDLE_VALUE;
 			memset(Me->MyMAC, 0, 6);
-			EndDialog(hWnd, 0);
 
 			const LPCWSTR RegKey = L"Software\\MegaLAN";
 			HKEY Key;
@@ -642,13 +656,12 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 		SwitchingTable[FromMAC] = Entry;
 		return;
 	}
-	if (memcmp(Packet.buffer, "PING", 4) == 0 || memcmp(Packet.buffer, "INIT", 4) == 0)
+	if (memcmp(Packet.buffer, "PING", 4) == 0 || memcmp(Packet.buffer, "INIT", 4) == 0 || memcmp(Packet.buffer, "LAND", 4) == 0)
 	{
 		if (memcmp(ID, Packet.buffer + 4, 20) != 0)
 			return;
 		if (memcmp(Socket.AuthID, Packet.buffer + 24, 20) == 0 && memcmp(Packet.buffer + 44, MyMAC, 6) == 0)
 			return;
-		RegisterPeer(Packet.buffer + 24, Packet.buffer + 44, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port));
 
 		if (memcmp(Packet.buffer, "PING", 4) == 0)
 		{
@@ -659,14 +672,17 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 			*(UINT16*)(Buffer + 30) = htons(0);
 			Socket.SendToPeer(Packet.addr, Buffer, 32);
 		}
-		else if (memcmp(Packet.buffer, "INIT", 4) == 0)
+		else if (memcmp(Packet.buffer, "INIT", 4) == 0 || memcmp(Packet.buffer, "LAND", 4) == 0)
 		{
 			BYTE Buffer[4096];
-			memcpy(Buffer, "PONG", 4);
+			if (memcmp(Packet.buffer, "LAND", 4) == 0)
+				memcpy(Buffer, "LANR", 4);
+			else
+				memcpy(Buffer, "PONG", 4);
 			UINT16 Count = 0;
 			for (int index = 0; index < PeerList.size(); ++index)
 			{
-				if (PeerList[index].PreferredAddress)
+				if (PeerList[index].PreferredAddress && !( memcmp(PeerList[index].UserID, Packet.buffer + 24, 20) == 0 && memcmp(PeerList[index].MAC + 44, MyMAC, 6) == 0 ))
 				{
 					memcpy(Buffer + 32 + (Count * 44), &PeerList[index].UserID, 20);
 					memcpy(Buffer + 32 + (Count * 44) + 20, &PeerList[index].MAC, 6);
@@ -680,8 +696,9 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 			*(UINT16*)(Buffer + 30) = htons(Count);
 			Socket.SendToPeer(Packet.addr, Buffer, 32 + (Count * 44));
 		}
+		RegisterPeer(Packet.buffer + 24, Packet.buffer + 44, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port));
 	}
-	if (memcmp(Packet.buffer, "PONG", 4) == 0)
+	if (memcmp(Packet.buffer, "PONG", 4) == 0 || memcmp(Packet.buffer, "LANR", 4) == 0)
 	{
 		if (memcmp(Socket.AuthID, Packet.buffer + 4, 20) == 0 && memcmp(Packet.buffer + 24, MyMAC, 6) == 0)
 			return;
@@ -689,7 +706,8 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 		{
 			if (memcmp(P.UserID, Packet.buffer + 4, 20) == 0 && memcmp(P.MAC, Packet.buffer + 24, 6) == 0)
 			{
-				P.Pong(Packet.addr);
+				if (memcmp(Packet.buffer, "PONG", 4) == 0)
+					P.Pong(Packet.addr);
 				if (Packet.len >= 32)
 				{
 					UINT Count = htons(*(UINT16*)(Packet.buffer + 30));
@@ -784,7 +802,7 @@ void Client::ReadPacket(BYTE* Buffer, WORD len)
 					DWORD TransactionID = *(DWORD*)(Payload + 4);
 
 					BYTE DHCPResponse[1500] = { 0 };
-					memcpy(DHCPResponse, Buffer + 6, 6);// To MAC
+					memcpy(DHCPResponse, Buffer, 6);// To MAC
 					memcpy(DHCPResponse + 6, Buffer + 6, 6);// From MAC
 					DHCPResponse[7] ^= 0xFF; // Toggle 1 byte of From MAC
 					*(UINT16*)(DHCPResponse + 12) = htons(0x0800);// EtherType
@@ -814,7 +832,7 @@ void Client::ReadPacket(BYTE* Buffer, WORD len)
 						*(UINT16*)(ResponseDHCPPacket + 10) = htons(0x8000); // broadcast flags
 					*(struct in_addr*)(ResponseDHCPPacket + 12) = IPv4Header->src;	// Client IP
 					*(struct in_addr*)(ResponseDHCPPacket + 16) = this->IPv4_Address;	// Assigned IP
-					inet_pton(AF_INET, "10.0.0.0", (struct in_addr*)(ResponseDHCPPacket + 20)); // Server IP
+					inet_pton(AF_INET, "127.0.0.1", (struct in_addr*)(ResponseDHCPPacket + 20)); // Server IP
 					inet_pton(AF_INET, "0.0.0.0", (struct in_addr*)(ResponseDHCPPacket + 24)); // Relay Agent
 					memcpy(ResponseDHCPPacket + 28, FromMAC, 6); // Client MAC
 					
@@ -831,23 +849,27 @@ void Client::ReadPacket(BYTE* Buffer, WORD len)
 
 					Option[0] = 54;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = *(DWORD*)&ResponseIPHeader->dest;
+					*(DWORD*)(Option + 2) = *(DWORD*)(ResponseDHCPPacket + 20);
 					Option += 6;
 					Option[0] = 51;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = htonl(3700);
+					*(DWORD*)(Option + 2) = htonl(3600);
 					Option += 6;
 					Option[0] = 58;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = htonl(3605);
+					*(DWORD*)(Option + 2) = htonl(1800);
 					Option += 6;
 					Option[0] = 59;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = htonl(3600);
+					*(DWORD*)(Option + 2) = htonl(2400);
 					Option += 6;
 					Option[0] = 1;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = htonl(0xFFFFFFFF<<(32-this->IPv4_PrefixLength));
+					*(DWORD*)(Option + 2) = htonl(0xFFFFFFFF << (32 - this->IPv4_PrefixLength));
+					Option += 6;
+					Option[0] = 28;
+					Option[1] = 4;
+					*(DWORD*)(Option + 2) = htonl(0xFFFFFFFF >> this->IPv4_PrefixLength) | *(DWORD*)&this->IPv4_Address;
 					Option += 6;
 					Option[0] = 0xFF;
 					Option += 1;

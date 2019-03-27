@@ -4,7 +4,7 @@ struct PeerAddrInfo {
 	UINT16 Latency;
 	UINT64 LastCheckTime;
 	UINT64 LastRecvTime;
-	std::wstring IPString;
+	WCHAR IPString[192];
 };
 class Peer
 {

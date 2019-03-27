@@ -37,12 +37,14 @@ void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port)
 			return;
 		}
 	}
-	PeerAddrInfo Info;
+	PeerAddrInfo Info = { 0 };
+	Info.Address.sin6_family = AF_INET6;
 	memcpy(&Info.Address, &Addr, sizeof(Addr));
 	char IP[128];
 	inet_ntop(AF_INET6, &Info.Address.sin6_addr, IP, sizeof(IP));
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
-	Info.IPString = utf8_conv.from_bytes(IP) + L"..";
+	std::wstring IPString = utf8_conv.from_bytes(IP);
+	lstrcpyW(Info.IPString, IPString.c_str());
 	Addresses.push_back(Info);
 
 	printf("Register IP for ");
@@ -50,6 +52,7 @@ void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port)
 		printf("%02X", this->UserID[x]);
 	for (int x = 0; x < 6; x++)
 		printf(":%02X", this->MAC[x]);
+	printf("%s %d", IP, Port);
 	printf("\n");
 }
 
@@ -57,6 +60,7 @@ void Peer::Poll()
 {
 	UINT64 Time = GetTickCount64();
 	UINT64 LowestLatency = -1;
+
 	PreferredAddress = NULL;
 	for (int index = 0; index < Addresses.size(); ++index)
 	{
