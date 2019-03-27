@@ -736,7 +736,7 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 					UINT Count = htons(*(UINT16*)(Packet.buffer + 30));
 					for (int x = 0; x < Count && (Count * 44 + 6) <= Packet.len; x++)
 					{
-						RegisterPeer(Packet.buffer + 32 + (x * 44), Packet.buffer + 32 + (x * 44) + 20, *(struct in6_addr*)(Packet.buffer + 32 + (x * 44) + 26), htons(*(UINT*)(Packet.buffer + 32 + (x * 44) + 42)), DISCOVERY_FROM_INIT);
+						RegisterPeer(Packet.buffer + 32 + (x * 44), Packet.buffer + 32 + (x * 44) + 20, *(struct in6_addr*)(Packet.buffer + 32 + (x * 44) + 26), htons(*(UINT*)(Packet.buffer + 32 + (x * 44) + 42)), DISCOVERY_FROM_PEER);
 					}
 				}
 				return;
