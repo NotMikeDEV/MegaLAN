@@ -6,14 +6,16 @@
 #define IDD_LOGIN                       101
 #define IDD_MEGALAN_DIALOG              102
 #define IDD_SELECT_NIC                  102
-#define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
 #define IDM_ABOUT                       104
 #define IDI_MEGALAN                     107
-#define IDC_MEGALAN                     109
+#define DISCOVERY_FROM_INIT             113
 #define IDR_MAINFRAME                   128
 #define IDD_PASSWORD                    129
 #define IDD_CLIENT                      130
+#define DISCOVERY_FROM_SERVER           200
+#define DISCOVERY_FROM_PEER             201
+#define DISCOVERY_FROM_LAN              202
 #define IDC_LIST_NICS                   1000
 #define IDC_ADD_NIC                     1001
 #define IDC_USERNAME                    1004
@@ -37,6 +39,6 @@
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1025
-#define _APS_NEXT_SYMED_VALUE           110
+#define _APS_NEXT_SYMED_VALUE           114
 #endif
 #endif

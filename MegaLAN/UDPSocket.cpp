@@ -137,7 +137,9 @@ void UDPSocket::SendToServer(char Type[4], BYTE* Payload, int PayloadLength)
 	BYTE Buffer[4096] = { 0 };
 	memcpy(Buffer, Type, 4);
 	memcpy(Buffer + 4, AuthID, 20);
-	printf("Sending %d (%d) to server from ", PayloadLength, 24 + PayloadLength);
+	char TypeT[5] = { 0 };
+	memcpy(TypeT, Type, 4);
+	printf("Sending %s %d (%d) to server from ", Type, PayloadLength, 24 + PayloadLength);
 	for (int x = 0; x < sizeof(AuthID); x++)
 		printf("%02X ", AuthID[x]);
 	printf("\n");
@@ -157,7 +159,9 @@ void UDPSocket::SendToPeer(struct sockaddr_in6 &Addr, BYTE* Payload, int Payload
 	BYTE Buffer[4096] = { 0 };
 	char IP[128];
 	inet_ntop(AF_INET6, &Addr.sin6_addr, IP, sizeof(IP));
-	printf("Sending %d to peer %s %u with key ", PayloadLength, IP, htons(Addr.sin6_port));
+	char TypeT[5] = { 0 };
+	memcpy(TypeT, Payload, 4);
+	printf("Sending %s %d to peer %s %u with key ", TypeT, PayloadLength, IP, htons(Addr.sin6_port));
 	for (int x = 0; x < sizeof(p2pKey); x++)
 		printf("%02X ", p2pKey[x]);
 	printf("\n");

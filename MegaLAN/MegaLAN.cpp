@@ -11,14 +11,13 @@
 // Global Variables:
 HINSTANCE hInst;
 HWND hWnd;
-WCHAR szTitle[MAX_LOADSTRING];
-WCHAR szWindowClass[MAX_LOADSTRING];
 NOTIFYICONDATA trayIcon;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+LPCWSTR szWindowClass = L"MegaLAN";
 
 NICSelector NICs;
 UDPSocket Socket;
@@ -45,8 +44,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	SetCurrentDirectory(path);
 
 	// Initialize global strings
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_MEGALAN, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -54,8 +51,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         return FALSE;
     }
-
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MEGALAN));
 
     MSG msg;
 	if (lstrcmpW(lpCmdLine, L"/Autorun") == 0)
@@ -100,7 +95,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        if (!TranslateAccelerator(msg.hwnd, NULL, &msg))
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -122,19 +117,16 @@ int main(int argc, char*argv[])
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
-    WNDCLASSEXW wcex;
+	WNDCLASSEXW wcex = { 0 };
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 
     wcex.style          = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
     wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MEGALAN));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_MEGALAN);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_MEGALAN));
 
@@ -154,7 +146,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 BOOL InitInstance(HINSTANCE hInstance)
 {
 	hInst = hInstance; // Store instance handle in our global variable
-	hWnd = CreateWindow(szWindowClass, szTitle, WS_CAPTION| WS_SYSMENU, CW_USEDEFAULT, 0, 600, 500, nullptr, nullptr, hInstance, nullptr);
+	hWnd = CreateWindow(szWindowClass, L"MegaLAN", WS_CAPTION| WS_SYSMENU, CW_USEDEFAULT, 0, 600, 500, nullptr, nullptr, hInstance, nullptr);
 	if (!hWnd)
 	{
 		return FALSE;

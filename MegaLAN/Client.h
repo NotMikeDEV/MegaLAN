@@ -67,7 +67,7 @@ public:
 	void Start();
 	void SendRegister();
 	void OpenDevice();
-	void RegisterPeer(BYTE* UserID, BYTE* MAC, struct in6_addr &Address, UINT16 Port);
+	void RegisterPeer(BYTE* UserID, BYTE* MAC, struct in6_addr &Address, UINT16 Port, UINT DiscoverySource);
 	void RecvPacketFromServer(struct InboundUDP &Packet);
 	void RecvPacket(struct InboundUDP &Packet);
 	void ReadPacket(BYTE* Buffer, WORD len);

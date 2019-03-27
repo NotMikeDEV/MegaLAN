@@ -224,12 +224,15 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		PeerCol.pszText = (LPWSTR)L"Latency";
 		PeerCol.cx = 50;
 		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERADDR), 3, &PeerCol);
+		PeerCol.pszText = (LPWSTR)L"Flags";
+		PeerCol.cx = 50;
+		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERADDR), 4, &PeerCol);
 		PeerCol.pszText = (LPWSTR)L"Check";
 		PeerCol.cx = 70;
-		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERADDR), 4, &PeerCol);
+		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERADDR), 5, &PeerCol);
 		PeerCol.pszText = (LPWSTR)L"Recv";
 		PeerCol.cx = 70;
-		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERADDR), 5, &PeerCol);
+		ListView_InsertColumn(GetDlgItem(hWnd, IDC_PEERADDR), 6, &PeerCol);
 
 		HIMAGELIST IMGLST = ImageList_Create(1, 50, 0, 0, 1);
 		ListView_SetImageList(GetDlgItem(hWnd, IDC_PEERS), IMGLST, LVSIL_NORMAL);
@@ -255,7 +258,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		trayIcon.hWnd = hWnd;
 		ShowWindow(::hWnd, SW_HIDE);
 		Shell_NotifyIcon(NIM_ADD, &trayIcon);
-		SetTimer(hWnd, 0, 180000, NULL);
+		SetTimer(hWnd, 0, 60000, NULL);
 		SetTimer(hWnd, 1, 1000, NULL);
 		SetTimer(hWnd, 2, 10000, NULL);
 		PostMessage(hWnd, WM_TIMER, 2, 0);
@@ -370,12 +373,27 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 					break;
 					case 4:
 					{
+						static std::wstring Flags = L"";
+						Flags = L"";
+						if (Me->PeerList[Selected].Addresses[plvdi->item.iItem].DiscoveryFlags.FromServer)
+							Flags += L"S";
+						if (Me->PeerList[Selected].Addresses[plvdi->item.iItem].DiscoveryFlags.FromPeer)
+							Flags += L"P";
+						if (Me->PeerList[Selected].Addresses[plvdi->item.iItem].DiscoveryFlags.FromINIT)
+							Flags += L"I";
+						if (Me->PeerList[Selected].Addresses[plvdi->item.iItem].DiscoveryFlags.FromLAN)
+							Flags += L"L";
+						plvdi->item.pszText = (LPWSTR)Flags.c_str();
+					}
+					break;
+					case 5:
+					{
 						static WCHAR CheckTime[10];
 						wsprintf(CheckTime, L"%d", (GetTickCount64() - Me->PeerList[Selected].Addresses[plvdi->item.iItem].LastCheckTime)/1000);
 						plvdi->item.pszText = (LPWSTR)CheckTime;
 					}
 					break;
-					case 5:
+					case 6:
 					{
 						if (Me->PeerList[Selected].Addresses[plvdi->item.iItem].LastRecvTime)
 						{
@@ -443,6 +461,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				if (it->Timeout < GetTickCount64())
 				{
 					Me->PeerList.erase(it);
+					it--;
 				}
 				else
 					it->Poll();
@@ -612,16 +631,16 @@ void Client::RecvPacketFromServer(struct InboundUDP &Packet)
 		{
 			if (NewPeer == P)
 			{
-				P.RegisterAddress(*(struct in_addr6*)(Packet.buffer + 50), htons(*(UINT16*)(Packet.buffer + 66)));
+				P.RegisterAddress(*(struct in_addr6*)(Packet.buffer + 50), htons(*(UINT16*)(Packet.buffer + 66)), DISCOVERY_FROM_SERVER);
 				return;
 			}
 		}
-		NewPeer.RegisterAddress(*(struct in_addr6*)(Packet.buffer + 50), htons(*(UINT16*)(Packet.buffer + 66)));
+		NewPeer.RegisterAddress(*(struct in_addr6*)(Packet.buffer + 50), htons(*(UINT16*)(Packet.buffer + 66)), DISCOVERY_FROM_SERVER);
 		PeerList.push_back(NewPeer);
 		ListView_SetItemCountEx(GetDlgItem(hWnd, IDC_PEERS), PeerList.size(), LVSICF_NOSCROLL);
 	}
 }
-void Client::RegisterPeer(BYTE* UserID, BYTE* MAC, struct in6_addr &Address, UINT16 Port)
+void Client::RegisterPeer(BYTE* UserID, BYTE* MAC, struct in6_addr &Address, UINT16 Port, UINT DiscoverySource)
 {
 	if (memcmp(UserID, Socket.AuthID, 20) == 0 && memcmp(MAC, MyMAC, 6) == 0)
 		return;
@@ -630,11 +649,11 @@ void Client::RegisterPeer(BYTE* UserID, BYTE* MAC, struct in6_addr &Address, UIN
 	{
 		if (NewPeer == P)
 		{
-			P.RegisterAddress(Address, Port);
+			P.RegisterAddress(Address, Port, DiscoverySource);
 			return;
 		}
 	}
-	NewPeer.RegisterAddress(Address, Port);
+	NewPeer.RegisterAddress(Address, Port, DiscoverySource);
 	PeerList.push_back(NewPeer);
 	printf("Register new peer\n");
 }
@@ -671,6 +690,7 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 			memcpy(Buffer + 24, MyMAC, 6);
 			*(UINT16*)(Buffer + 30) = htons(0);
 			Socket.SendToPeer(Packet.addr, Buffer, 32);
+			RegisterPeer(Packet.buffer + 24, Packet.buffer + 44, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port), DISCOVERY_FROM_INIT);
 		}
 		else if (memcmp(Packet.buffer, "INIT", 4) == 0 || memcmp(Packet.buffer, "LAND", 4) == 0)
 		{
@@ -695,8 +715,11 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 			memcpy(Buffer + 24, MyMAC, 6);
 			*(UINT16*)(Buffer + 30) = htons(Count);
 			Socket.SendToPeer(Packet.addr, Buffer, 32 + (Count * 44));
+			if (memcmp(Packet.buffer, "LAND", 4) == 0)
+				RegisterPeer(Packet.buffer + 24, Packet.buffer + 44, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port), DISCOVERY_FROM_LAN);
+			else
+				RegisterPeer(Packet.buffer + 24, Packet.buffer + 44, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port), DISCOVERY_FROM_INIT);
 		}
-		RegisterPeer(Packet.buffer + 24, Packet.buffer + 44, Packet.addr.sin6_addr, htons(Packet.addr.sin6_port));
 	}
 	if (memcmp(Packet.buffer, "PONG", 4) == 0 || memcmp(Packet.buffer, "LANR", 4) == 0)
 	{
@@ -713,7 +736,7 @@ void Client::RecvPacket(struct InboundUDP &Packet)
 					UINT Count = htons(*(UINT16*)(Packet.buffer + 30));
 					for (int x = 0; x < Count && (Count * 44 + 6) <= Packet.len; x++)
 					{
-						RegisterPeer(Packet.buffer + 32 + (x * 44), Packet.buffer + 32 + (x * 44) + 20, *(struct in6_addr*)(Packet.buffer + 32 + (x * 44) + 26), htons(*(UINT*)(Packet.buffer + 32 + (x * 44) + 42)));
+						RegisterPeer(Packet.buffer + 32 + (x * 44), Packet.buffer + 32 + (x * 44) + 20, *(struct in6_addr*)(Packet.buffer + 32 + (x * 44) + 26), htons(*(UINT*)(Packet.buffer + 32 + (x * 44) + 42)), DISCOVERY_FROM_INIT);
 					}
 				}
 				return;

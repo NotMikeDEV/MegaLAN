@@ -22,7 +22,7 @@ bool Peer::operator==(Peer &Other)
 	return false;
 }
 
-void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port)
+void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port, UINT DiscoverySource)
 {
 	struct sockaddr_in6 Addr = {0};
 	Addr.sin6_family = AF_INET6;
@@ -34,6 +34,14 @@ void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port)
 		{
 			if (A.State == 0)
 				A.LastCheckTime = 0;
+			if (DiscoverySource == DISCOVERY_FROM_SERVER)
+				A.DiscoveryFlags.FromServer = true;
+			if (DiscoverySource == DISCOVERY_FROM_PEER)
+				A.DiscoveryFlags.FromPeer = true;
+			if (DiscoverySource == DISCOVERY_FROM_INIT)
+				A.DiscoveryFlags.FromINIT = true;
+			if (DiscoverySource == DISCOVERY_FROM_LAN)
+				A.DiscoveryFlags.FromLAN = true;
 			return;
 		}
 	}
@@ -45,6 +53,15 @@ void Peer::RegisterAddress(const struct in_addr6 &Address, UINT16 Port)
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
 	std::wstring IPString = utf8_conv.from_bytes(IP);
 	lstrcpyW(Info.IPString, IPString.c_str());
+
+	if (DiscoverySource == DISCOVERY_FROM_SERVER)
+		Info.DiscoveryFlags.FromServer = true;
+	if (DiscoverySource == DISCOVERY_FROM_PEER)
+		Info.DiscoveryFlags.FromPeer = true;
+	if (DiscoverySource == DISCOVERY_FROM_INIT)
+		Info.DiscoveryFlags.FromINIT = true;
+	if (DiscoverySource == DISCOVERY_FROM_LAN)
+		Info.DiscoveryFlags.FromLAN = true;
 	Addresses.push_back(Info);
 
 	printf("Register IP for ");
