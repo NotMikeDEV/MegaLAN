@@ -118,7 +118,7 @@ server.on('message', (msg, rinfo) => {
 				const iv = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 				var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
 				var encrypted = cipher.update('OPEN', 'binary', 'hex');
-				encrypted += cipher.update('https://' + ServerName + '.megalan.app/create_vlan/?user=' + UserHash.toString('hex') + '&token=' + Token.toString('hex') + '&name=' + Name + "\0", 'utf8', 'hex');
+				encrypted += cipher.update('https://' + ServerName + '/create_vlan/?user=' + UserHash.toString('hex') + '&token=' + Token.toString('hex') + '&name=' + Name + "\0", 'utf8', 'hex');
 				encrypted += cipher.final('hex');
 				server.send(Buffer.from(encrypted, 'hex'), rinfo.port, rinfo.address);
 				console.log(`server got create request from ${user[0].Username} for ${Name}`);
