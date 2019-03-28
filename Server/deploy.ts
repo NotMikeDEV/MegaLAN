@@ -25,6 +25,7 @@ function PushRemote(server, local, remote) {
 	}
 }
 function DoServer(server) {
+//	ExecRemote(server, '/MegaLAN/app.lua clean');
 	PushRemote(server, "app.lua HTTPServer.js UDPServer.js www", "/MegaLAN/");
 	ExecRemote(server, 'chmod +x /MegaLAN/app.lua /MegaLAN/*.js && /MegaLAN/app.lua restart >/dev/null 2>&1 &');
 }

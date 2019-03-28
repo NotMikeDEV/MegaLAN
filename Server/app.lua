@@ -20,7 +20,7 @@ function install_container()
 	exec_or_die("wget -O- https://deb.nodesource.com/setup_8.x | bash -")
 	install_package("nodejs")
 	exec_or_die("npm install mysql")
-	exec_or_die("npm install mailer")
+	exec_or_die("npm install sendmail")
 	exec_or_die("npm install ip6addr")
 	return 0
 end
