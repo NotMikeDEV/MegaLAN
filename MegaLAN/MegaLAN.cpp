@@ -395,7 +395,7 @@ void RecvPacket(struct InboundUDP &Packet)
 		printf("IP: %s Port %u\n", IP, htons(Address.sin6_port));
 		for (struct sockaddr_in6 &a : MyExternalAddresses)
 		{
-			if (memcmp(&a, &Address, sizeof(Address)) == 0 && a.sin6_port == Address.sin6_port)
+			if (memcmp(&a.sin6_addr, &Address.sin6_addr, sizeof(Address.sin6_addr)) == 0 && a.sin6_port == Address.sin6_port)
 			{
 				return;
 			}
