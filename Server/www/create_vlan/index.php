@@ -1,9 +1,8 @@
 <?php header("Content-Type: text/html; charset=utf-8"); ob_start();	require "../Database.php";
 $db = new Database();
-$row = $db->Query("SELECT COUNT(*) as Valid, Username FROM Accounts WHERE UserHash = :userhash AND Token = :token", [':userhash'=>$_GET['user'], ':token'=>$_GET['token']])->fetch();
-if (!$row || !$row['Valid'])
+$user = $db->Query("SELECT COUNT(*) as Valid, UserHash FROM Accounts WHERE UserHash = :userhash AND Token = :token", [':userhash'=>$_GET['user'], ':token'=>$_GET['token']])->fetch();
+if (!$user || !$user['Valid'])
 {
-	var_dump($row);
 	die("Invalid token.");
 }
 ?>
@@ -112,9 +111,10 @@ if ($_SERVER['REQUEST_METHOD'] == "POST")
 			}
 			else
 			{
-				$db->Query("INSERT INTO VLANs (VLANID, Public) VALUES(:ID, :Public)", [
+				$db->Query("INSERT INTO VLANs (VLANID, Public, Owner) VALUES(:ID, :Public, :Owner)", [
 					':ID'=>$VLANID,
-					':Public'=>(isset($_POST['Hidden']) && $_POST['Hidden'] == 'on')?0:1
+					':Public'=>(isset($_POST['Hidden']) && $_POST['Hidden'] == 'on')?0:1,
+					':Owner'=>$user['UserHash']
 				]);
 				$IPv4=isset($_POST['IPv4'])?$_POST['IPv4']:'';
 				if (!strlen($IPv4))
