@@ -26,6 +26,12 @@ setInterval(function(){
 	database.query("DELETE FROM IP_Allocations WHERE Time < ?", [Math.floor(new Date() / 1000) - 3600*24]);
 }, 60000);
 server.on('message', (msg, rinfo) => {
+	if (msg == "URLAREGISTER") {
+		server.send("URLAhttps://" + ServerName + "/register/", rinfo.port, rinfo.address);
+	}
+	if (msg == "URLAFORGOTPW") {
+		server.send("URLAhttps://" + ServerName + "/password/", rinfo.port, rinfo.address);
+	}
 	var Buff = Buffer.from(msg);
 	var Type = Buff.slice(0,4);
 	var UserHash = Buff.slice(4,24);

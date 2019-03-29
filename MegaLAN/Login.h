@@ -8,6 +8,7 @@ private:
 	std::wstring Server;
 	bool IsLoggingIn;
 	bool IsAuthenticated;
+	bool WaitingForURL = false;
 public:
 	Login();
 	~Login();

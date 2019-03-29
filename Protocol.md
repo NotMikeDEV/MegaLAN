@@ -28,6 +28,30 @@ Server > Client (Failure)
 
 ["AUTH":4]
 
+### Create Account
+
+Client > Server
+
+["URLA":4]["REGISTER":8]
+
+Server > Client
+
+["URLA:4"][URL:N]
+
+Client should then open the received URL.
+
+### Forgot Password
+
+Client > Server
+
+["URLA":4]["FORGOTPW":8]
+
+Server > Client
+
+["URLA:4"][URL:N]
+
+Client should then open the received URL.
+
 ### VLAN Listing
 
 Initial request [Mark] is 0x00000000, client will repeat requests with the Mark from the last response until a [Count] of 0 is received.

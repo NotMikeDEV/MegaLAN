@@ -25,6 +25,7 @@ public:
 	void SendToServer(char Type[4], BYTE* Payload, int PayloadLength);
 	void Setp2pKey(BYTE* Key);
 	void SendToPeer(struct sockaddr_in6 &Addr, BYTE* Payload, int PayloadLength);
+	void SendRawToServers(std::wstring Server, BYTE* Buffer, int Length);
 	void SendLogin(std::wstring Username, std::wstring Password, std::wstring Server);
 	~UDPSocket();
 };

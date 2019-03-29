@@ -85,15 +85,10 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			info.hwnd = hDlg;
 			WCHAR Server[255] = { 0 };
 			SendMessage(GetDlgItem(hDlg, IDC_SERVER), WM_GETTEXT, 254, (LPARAM)Server);
-			std::wstring URL = L"https://";
-			URL += Server;
-			URL += L"/register/";
-			info.lpFile = URL.c_str();
-			bool child = ShellExecuteEx(&info);
-			if (child) {
-				WaitForSingleObject(info.hProcess, INFINITE);
-				CloseHandle(info.hProcess);
-			}
+			Socket.SendRawToServers(Server, (BYTE*)"URLAREGISTER", 12);
+			SetTimer(hDlg, IDC_LOGIN, 2000, NULL);
+			Login* Me = (Login*)GetWindowLongPtr(hDlg, DWLP_USER);
+			Me->WaitingForURL = true;
 		}
 		if (LOWORD(wParam) == IDC_FORGOT_PASSWORD)
 		{
@@ -102,15 +97,10 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			info.hwnd = hDlg;
 			WCHAR Server[255] = { 0 };
 			SendMessage(GetDlgItem(hDlg, IDC_SERVER), WM_GETTEXT, 254, (LPARAM)Server);
-			std::wstring URL = L"https://";
-			URL += Server;
-			URL += L"/password/";
-			info.lpFile = URL.c_str();
-			bool child = ShellExecuteEx(&info);
-			if (child && info.hProcess) {
-				WaitForSingleObject(info.hProcess, INFINITE);
-				CloseHandle(info.hProcess);
-			}
+			Socket.SendRawToServers(Server, (BYTE*)"URLAFORGOTPW", 12);
+			SetTimer(hDlg, IDC_LOGIN, 2000, NULL);
+			Login* Me = (Login*)GetWindowLongPtr(hDlg, DWLP_USER);
+			Me->WaitingForURL = true;
 		}
 		if (LOWORD(wParam) == IDC_LOGIN)
 		{
@@ -157,9 +147,12 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			EnableWindow(GetDlgItem(hDlg, IDC_REGISTER), true);
 			EnableWindow(GetDlgItem(hDlg, IDC_FORGOT_PASSWORD), true);
 			KillTimer(hDlg, IDC_LOGIN);
-			MessageBox(NULL, L"Timed out contacting server.", L"Login failed.", 0);
+			MessageBox(NULL, L"Timed out contacting server.", L"Network Error", 0);
 			if (Me)
+			{
 				Me->IsLoggingIn = false;
+				Me->WaitingForURL = false;
+			}
 		}
 	break;
 	case WM_CLOSE:
@@ -183,6 +176,13 @@ void Login::RecvPacket(struct InboundUDP &Packet)
 	EnableWindow(GetDlgItem(hDlg, IDC_FORGOT_PASSWORD), true);
 	KillTimer(hDlg, IDC_LOGIN);
 	printf("Login recv %d\n", Packet.len);
+	if (WaitingForURL && memcmp(Packet.buffer, "URLA", 4) == 0)
+	{
+		WaitingForURL = false;
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
+		std::wstring URL = utf8_conv.from_bytes((char*)Packet.buffer + 4);
+		ShellExecute(hWnd, L"open", URL.c_str(), 0, 0, 0);
+	}
 	if (IsLoggingIn && Packet.len >= 2 && memcmp(Packet.buffer, "OK", 2) == 0)
 	{
 		IsLoggingIn = false;

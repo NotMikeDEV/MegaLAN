@@ -84,9 +84,18 @@ void UDPSocket::SocketEventMessage()
 	unsigned char Buffer[4096];
 	memset(Buffer, 0, sizeof(Buffer));
 	int ret = recvfrom(Socket, (char*)Buffer, sizeof(Buffer), 0, (sockaddr*)&from, &fromlen);
+	if (ret >= 4 && memcmp(Buffer, "URLA", 4) == 0)
+	{
+		printf("Recv URLA %s (%u bytes) from server\n", Buffer + 4, ret);
+		struct InboundUDP PacketInfo;
+		PacketInfo.addr = from;
+		PacketInfo.len = ret;
+		PacketInfo.buffer = Buffer;
+		Session.RecvPacket(PacketInfo);
+	}
 	if (ret >= 4 && memcmp(Buffer, "AUTH", 4) == 0)
 	{
-		printf("Recv AUTH (%u bytes) from server\n", ret);
+		printf("Recv %c%c%c%c (%u bytes) from server\n", Buffer[0], Buffer[1], Buffer[2], Buffer[3], ret);
 		if (ret = Crypt.AES256_Decrypt(Buffer + 4, ret - 4, AuthKey))
 		{
 			for (int x = 0; x < ret + 4; x++)
@@ -213,22 +222,8 @@ void UDPSocket::SendToPeer(struct sockaddr_in6 &Addr, BYTE* Payload, int Payload
 	sendto(Socket, (char*)Buffer, Len, 0, (struct sockaddr*)&Addr, sizeof(Addr));
 }
 
-void UDPSocket::SendLogin(std::wstring Username, std::wstring Password, std::wstring Server)
+void UDPSocket::SendRawToServers(std::wstring Server, BYTE* Buffer, int Length)
 {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
-	std::string User = utf8_conv.to_bytes(Username);
-	std::string Pass = utf8_conv.to_bytes(Password);
-	BYTE Buffer[1024] = { 0 };
-	std::string Login(User);
-	Login.append(Pass);
-	memcpy(Buffer, "AUTH", 4);
-	BYTE* SHA1 = Crypt.SHA1(User);
-	memcpy(Buffer + 4, SHA1, 20);
-	SetAuthID(SHA1);
-	SHA1 = Crypt.SHA1(Login);
-	memcpy(Buffer + 24, SHA1, 20);
-	BYTE* SHA256 = Crypt.SHA256(Login);
-	SetAuthKey(SHA256);
 	PADDRINFOW pResult, CurrentResult;
 	ADDRINFOW hints = { 0 };
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -245,11 +240,32 @@ void UDPSocket::SendLogin(std::wstring Username, std::wstring Password, std::wst
 	while (CurrentResult)
 	{
 		struct sockaddr_in6 from = { 0 };
-		sendto(Socket, (char*)Buffer, 44, 0, CurrentResult->ai_addr, CurrentResult->ai_addrlen);
+		sendto(Socket, (char*)Buffer, Length, 0, CurrentResult->ai_addr, CurrentResult->ai_addrlen);
 		CurrentResult = CurrentResult->ai_next;
 	}
 	if (pResult)
 		FreeAddrInfoW(pResult);
+	else
+		MessageBox(NULL, L"Unable to find server.", Server.c_str(), 0);
+}
+
+void UDPSocket::SendLogin(std::wstring Username, std::wstring Password, std::wstring Server)
+{
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
+	std::string User = utf8_conv.to_bytes(Username);
+	std::string Pass = utf8_conv.to_bytes(Password);
+	BYTE Buffer[1024] = { 0 };
+	std::string Login(User);
+	Login.append(Pass);
+	memcpy(Buffer, "AUTH", 4);
+	BYTE* SHA1 = Crypt.SHA1(User);
+	memcpy(Buffer + 4, SHA1, 20);
+	SetAuthID(SHA1);
+	SHA1 = Crypt.SHA1(Login);
+	memcpy(Buffer + 24, SHA1, 20);
+	BYTE* SHA256 = Crypt.SHA256(Login);
+	SetAuthKey(SHA256);
+	SendRawToServers(Server, Buffer, 44);
 	MyExternalAddresses.clear();
 }
 
