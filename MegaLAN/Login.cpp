@@ -130,8 +130,8 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			EnableWindow(GetDlgItem(hDlg, IDC_LOGIN), false);
 			EnableWindow(GetDlgItem(hDlg, IDC_REGISTER), false);
 			EnableWindow(GetDlgItem(hDlg, IDC_FORGOT_PASSWORD), false);
-			SetTimer(hDlg, IDC_LOGIN, 2000, NULL);
 			Socket.SendLogin(Username, Password, Server);
+			SetTimer(hDlg, IDC_LOGIN, 2000, NULL);
 			Me->IsLoggingIn = true;
 		}
 		if (LOWORD(wParam) == IDCANCEL)
