@@ -5,6 +5,7 @@ private:
 	HWND hDlg;
 	std::wstring Username;
 	std::wstring Password;
+	std::wstring Server;
 	bool IsLoggingIn;
 	bool IsAuthenticated;
 public:

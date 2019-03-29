@@ -26,6 +26,7 @@ void Login::Show()
 		RegSetKeyValue(MyKey, NULL, L"Password", REG_SZ, Password.c_str(), Password.length() * 2 + 2);
 	else
 		RegSetKeyValue(MyKey, NULL, L"Password", REG_SZ, L"", 0);
+	RegSetKeyValue(MyKey, NULL, L"Server", REG_SZ, Server.c_str(), Server.length() * 2 + 2);
 	RegCloseKey(Key);
 	RegCloseKey(MyKey);
 }
@@ -59,12 +60,21 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			PasswordLen = 0;
 		SendMessage(GetDlgItem(hDlg, IDC_PASSWORD), WM_SETTEXT, 0, (LPARAM)&Password);
 		Me->Password = Password;
+		WCHAR Server[255];
+		memset(Server, 0, sizeof(Server));
+		DWORD ServerLen = sizeof(Server);
+		if (RegGetValue(Key, NULL, L"Server", RRF_RT_REG_SZ, NULL, Server, &ServerLen) != ERROR_SUCCESS)
+			ServerLen = 0;
+		SendMessage(GetDlgItem(hDlg, IDC_SERVER), WM_SETTEXT, 0, (LPARAM)&Server);
+		Me->Server = Server;
 		RegCloseKey(Key);
-		if (!Me->IsAuthenticated && UsernameLen>2 && PasswordLen>2)
+		if (!Me->IsAuthenticated && UsernameLen > 2 && PasswordLen > 2 && ServerLen > 2)
 		{
 			PostMessage(hDlg, WM_COMMAND, IDC_LOGIN, 0);
 		}
 		Me->IsAuthenticated = false;
+		if (ServerLen <= 2)
+			SendMessage(GetDlgItem(hDlg, IDC_SERVER), WM_SETTEXT, 0, (LPARAM)L"MegaLAN.app");
 	}
 	break;
 	case WM_COMMAND:
@@ -73,7 +83,12 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			SHELLEXECUTEINFO info = { 0 };
 			info.cbSize = sizeof(info);
 			info.hwnd = hDlg;
-			info.lpFile = L"https://megalan.app/register/";
+			WCHAR Server[255] = { 0 };
+			SendMessage(GetDlgItem(hDlg, IDC_SERVER), WM_GETTEXT, 254, (LPARAM)Server);
+			std::wstring URL = L"https://";
+			URL += Server;
+			URL += L"/register/";
+			info.lpFile = URL.c_str();
 			bool child = ShellExecuteEx(&info);
 			if (child) {
 				WaitForSingleObject(info.hProcess, INFINITE);
@@ -85,7 +100,12 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			SHELLEXECUTEINFO info = { 0 };
 			info.cbSize = sizeof(info);
 			info.hwnd = hDlg;
-			info.lpFile = L"https://megalan.app/password/";
+			WCHAR Server[255] = { 0 };
+			SendMessage(GetDlgItem(hDlg, IDC_SERVER), WM_GETTEXT, 254, (LPARAM)Server);
+			std::wstring URL = L"https://";
+			URL += Server;
+			URL += L"/password/";
+			info.lpFile = URL.c_str();
 			bool child = ShellExecuteEx(&info);
 			if (child && info.hProcess) {
 				WaitForSingleObject(info.hProcess, INFINITE);
@@ -101,13 +121,17 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			WCHAR Password[255] = { 0 };
 			SendMessage(GetDlgItem(hDlg, IDC_PASSWORD), WM_GETTEXT, 254, (LPARAM)Password);
 			Me->Password = Password;
+			WCHAR Server[255] = { 0 };
+			SendMessage(GetDlgItem(hDlg, IDC_SERVER), WM_GETTEXT, 254, (LPARAM)Server);
+			Me->Server = Server;
 			EnableWindow(GetDlgItem(hDlg, IDC_USERNAME), false);
 			EnableWindow(GetDlgItem(hDlg, IDC_PASSWORD), false);
+			EnableWindow(GetDlgItem(hDlg, IDC_SERVER), false);
 			EnableWindow(GetDlgItem(hDlg, IDC_LOGIN), false);
 			EnableWindow(GetDlgItem(hDlg, IDC_REGISTER), false);
 			EnableWindow(GetDlgItem(hDlg, IDC_FORGOT_PASSWORD), false);
 			SetTimer(hDlg, IDC_LOGIN, 2000, NULL);
-			Socket.SendLogin(Username, Password);
+			Socket.SendLogin(Username, Password, Server);
 			Me->IsLoggingIn = true;
 		}
 		if (LOWORD(wParam) == IDCANCEL)
@@ -128,12 +152,14 @@ INT_PTR CALLBACK Login::LoginWndProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 			Login* Me = (Login*)GetWindowLongPtr(hDlg, DWLP_USER);
 			EnableWindow(GetDlgItem(hDlg, IDC_USERNAME), true);
 			EnableWindow(GetDlgItem(hDlg, IDC_PASSWORD), true);
+			EnableWindow(GetDlgItem(hDlg, IDC_SERVER), true);
 			EnableWindow(GetDlgItem(hDlg, IDC_LOGIN), true);
 			EnableWindow(GetDlgItem(hDlg, IDC_REGISTER), true);
 			EnableWindow(GetDlgItem(hDlg, IDC_FORGOT_PASSWORD), true);
 			KillTimer(hDlg, IDC_LOGIN);
 			MessageBox(NULL, L"Timed out contacting server.", L"Login failed.", 0);
-			Me->IsLoggingIn = false;
+			if (Me)
+				Me->IsLoggingIn = false;
 		}
 	break;
 	case WM_CLOSE:
@@ -151,6 +177,7 @@ void Login::RecvPacket(struct InboundUDP &Packet)
 {
 	EnableWindow(GetDlgItem(hDlg, IDC_USERNAME), true);
 	EnableWindow(GetDlgItem(hDlg, IDC_PASSWORD), true);
+	EnableWindow(GetDlgItem(hDlg, IDC_SERVER), true);
 	EnableWindow(GetDlgItem(hDlg, IDC_LOGIN), true);
 	EnableWindow(GetDlgItem(hDlg, IDC_REGISTER), true);
 	EnableWindow(GetDlgItem(hDlg, IDC_FORGOT_PASSWORD), true);

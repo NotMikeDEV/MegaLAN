@@ -213,7 +213,7 @@ void UDPSocket::SendToPeer(struct sockaddr_in6 &Addr, BYTE* Payload, int Payload
 	sendto(Socket, (char*)Buffer, Len, 0, (struct sockaddr*)&Addr, sizeof(Addr));
 }
 
-void UDPSocket::SendLogin(std::wstring Username, std::wstring Password)
+void UDPSocket::SendLogin(std::wstring Username, std::wstring Password, std::wstring Server)
 {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
 	std::string User = utf8_conv.to_bytes(Username);
@@ -234,7 +234,13 @@ void UDPSocket::SendLogin(std::wstring Username, std::wstring Password)
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_INET6;
 	hints.ai_flags = AI_V4MAPPED | AI_ALL;
-	GetAddrInfoW(L"servers.megalan.app", L"55555", &hints, &pResult);
+	std::wstring Port = L"55555";
+	if (Server.find(L":", 0) != std::string::npos)
+	{
+		Port = Server.substr(Server.find(L":", 0) + 1);
+		Server = Server.substr(0, Server.find(L":", 0));
+	}
+	GetAddrInfo(Server.c_str(), Port.c_str(), &hints, &pResult);
 	CurrentResult = pResult;
 	while (CurrentResult)
 	{
