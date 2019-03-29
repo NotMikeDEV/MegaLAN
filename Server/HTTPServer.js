@@ -32,16 +32,16 @@ var Handler = function (req, res) {
 				if (row.length)
 				{
 					console.log("Send Email", row);
-					Message = "Hello " + row[0].Username + "!\n<BR/><BR/>\n";
-					Message += "Welcome to MegaLAN, you are nearly ready to connect. Just one last thing to do, click the link below and set your password.\n<BR/><BR/>\n";
-					Message += "https://MegaLAN.app/password/?" + row[0].VerifyKey + "\n<BR/><BR/>\n";
-					Message += "Once that is done, you can start using MegaLAN.\n<BR/><BR/>\n";
+					Message = "Hello " + row[0].Username + "!\n\n";
+					Message += "Welcome to MegaLAN, you are nearly ready to connect. Just one last thing to do, click the link below and set your password.\n\n";
+					Message += "https://MegaLAN.app/password/?" + row[0].VerifyKey + "\n\n";
+					Message += "Once that is done, you can start using MegaLAN.\n\n";
 					Message += "If it wasn't you that registered this account, please ignore this email.\n\n";
 					sendmail({
 							to: row[0].Email,
 							from: "MegaLAN <No-Reply@MegaLAN.app>",
 							subject: "Welcome to MegaLAN",
-							html: Message,
+							text: Message,
 						},
 						function (err, result) {
 							if (err) console.log(err);
@@ -61,16 +61,16 @@ var Handler = function (req, res) {
 				if (row.length)
 				{
 					console.log("Send Email", row);
-					Message = "Hello " + row[0].Username + "!\n<BR/><BR/>\n";
-					Message += "To reset your password, click the link below.\n<BR/><BR/>\n";
-					Message += "https://MegaLAN.app/password/?" + row[0].VerifyKey + "\n<BR/><BR/>\n";
-					Message += "Once that is done, you can log in with your new password.\n<BR/><BR/>\n";
-					Message += "If it wasn't you that requested this password reset, please ignore this email.\n<BR/><BR/>\n";
+					Message = "Hello " + row[0].Username + "!\n\n";
+					Message += "To reset your password, click the link below.\n\n";
+					Message += "https://MegaLAN.app/password/?" + row[0].VerifyKey + "\n\n";
+					Message += "Once that is done, you can log in with your new password.\n\n";
+					Message += "If it wasn't you that requested this password reset, please ignore this email.\n\n";
 					sendmail({
 						to: row[0].Email,
 						from: "MegaLAN <No-Reply@MegaLAN.app>",
 						subject: "MegaLAN Password Reset",
-						html: Message,
+						text: Message,
 					},
 						function (err, result) {
 							if (err) console.log(err);
