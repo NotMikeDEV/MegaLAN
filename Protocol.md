@@ -74,16 +74,6 @@ Server > Client
 
 **["INFO":4][VLANID:20][Name:N][Description:N][PasswordProtected:1]**
 
-### VLAN Create
-
-Client > Server
-
-["MAKE":4][UserID:20][Name:N]
-
-Server > Client
-
-**["OPEN":4][URL:N]**
-
 ### Join VLAN
 
 Client > Server

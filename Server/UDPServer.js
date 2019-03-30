@@ -115,21 +115,6 @@ server.on('message', (msg, rinfo) => {
 				}
 			});
 		}
-		else if (user[0].Valid && Type == "MAKE")
-		{
-			var Name = Buff.slice(24);
-			var Token=crypto.randomBytes(10);
-			database.query("UPDATE Accounts SET Token=? WHERE UserHash=?", [Token.toString('hex'), UserHash.toString('hex')], function () {
-				var CryptoKey = Buffer.from(user[0].CryptoHash, "hex");
-				const iv = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-				var cipher = crypto.createCipheriv('aes-256-cbc', CryptoKey, iv);
-				var encrypted = cipher.update('OPEN', 'binary', 'hex');
-				encrypted += cipher.update('https://' + ServerName + '/create_vlan/?user=' + UserHash.toString('hex') + '&token=' + Token.toString('hex') + '&name=' + Name + "\0", 'utf8', 'hex');
-				encrypted += cipher.final('hex');
-				server.send(Buffer.from(encrypted, 'hex'), rinfo.port, rinfo.address);
-				console.log(`server got create request from ${user[0].Username} for ${Name}`);
-			});
-		}
 		else if (user[0].Valid && Type == "JOIN")
 		{
 			var Name = Buff.slice(24);

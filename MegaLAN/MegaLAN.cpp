@@ -208,10 +208,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		CreateWindowEx(0, WC_BUTTON, L"Select NIC", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.left, rect.top, 100, 30, hWnd, (HMENU)1, (HINSTANCE)GetModuleHandle(NULL), 0);
 		CreateWindowEx(0, WC_BUTTON, L"Log Out", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.right - 140, rect.top, 70, 30, hWnd, (HMENU)2, (HINSTANCE)GetModuleHandle(NULL), 0);
 		CreateWindowEx(0, WC_BUTTON, L"Exit", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.right - 70, rect.top, 70, 30, hWnd, (HMENU)0xFF, (HINSTANCE)GetModuleHandle(NULL), 0);
-		CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, L"", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOVSCROLL, rect.left, rect.top + 30, rect.right - 180, 25, hWnd, (HMENU)0x10, (HINSTANCE)GetModuleHandle(NULL), 0);
-		CreateWindowEx(0, WC_BUTTON, L"Join", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.right-180, rect.top + 30, 50, 25, hWnd, (HMENU)0x11, (HINSTANCE)GetModuleHandle(NULL), 0);
-		CreateWindowEx(0, WC_BUTTON, L"Refresh", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.right - 130, rect.top + 30, 70, 25, hWnd, (HMENU)0x12, (HINSTANCE)GetModuleHandle(NULL), 0);
-		CreateWindowEx(0, WC_BUTTON, L"Create", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.right - 60, rect.top + 30, 60, 25, hWnd, (HMENU)0x13, (HINSTANCE)GetModuleHandle(NULL), 0);
+		CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, L"", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOVSCROLL, rect.left, rect.top + 30, rect.right - 120, 25, hWnd, (HMENU)0x10, (HINSTANCE)GetModuleHandle(NULL), 0);
+		CreateWindowEx(0, WC_BUTTON, L"Join", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.right-120, rect.top + 30, 50, 25, hWnd, (HMENU)0x11, (HINSTANCE)GetModuleHandle(NULL), 0);
+		CreateWindowEx(0, WC_BUTTON, L"Refresh", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, rect.right - 70, rect.top + 30, 70, 25, hWnd, (HMENU)0x12, (HINSTANCE)GetModuleHandle(NULL), 0);
 		HWND LV = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, L"", WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | LVS_REPORT | LVS_OWNERDATA | LVS_SINGLESEL, rect.left, rect.top+55, rect.right, rect.bottom-55, hWnd, (HMENU)0x20, (HINSTANCE)GetModuleHandle(NULL), 0);
 		SendMessage(LV, LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
 		LVCOLUMN Name;
@@ -264,15 +263,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 			case 0x12:
 				PostMessage(hWnd, WM_USER + 10, 0, 0);
-			break;
-			case 0x13:
-			{
-				WCHAR Value[256] = { 0 };
-				GetDlgItemText(hWnd, 0x10, Value, 255);
-				std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
-				std::string Name = utf8_conv.to_bytes(Value);
-				Socket.SendToServer((char*)"MAKE", (BYTE*)Name.c_str(), (int)Name.size());
-			}
 			break;
 			case 0xFF:
 			{
@@ -419,12 +409,6 @@ void RecvPacket(struct InboundUDP &Packet)
 			Socket.SendToServer((char*)"LIST", (BYTE*)&ListLoadPoint, 4);
 			SetTimer(hWnd, 1, 1000, NULL);
 		}
-	}
-	else if (Packet.len > 4 && memcmp(Packet.buffer, "OPEN", 4) == 0)
-	{
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
-		std::wstring URL = utf8_conv.from_bytes((char*)Packet.buffer + 4);
-		ShellExecute(hWnd, L"open", URL.c_str(), 0, 0, 0);
 	}
 	else if (Packet.len > 24 && memcmp(Packet.buffer, "INFO", 4) == 0)
 	{
