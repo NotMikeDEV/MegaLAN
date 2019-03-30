@@ -31,6 +31,12 @@ if (isset($_GET['id']) && isset($_GET['action']) && $_GET['action'] == "delete")
 	header("Location: .");
 	include("../Footer.php");
 }
+if (isset($_GET['id']) && isset($_GET['action']) && $_GET['action'] == "deleteMAC" && isset($_GET['MAC']))
+{
+	$Check = $db->Query("DELETE FROM IP_Allocations WHERE VLANID = :VLANID AND MAC = :MAC", [':VLANID'=>$_GET['id'], ':MAC'=>$_GET['MAC']]);
+	header("Location: ?id=" . $_GET['id']);
+	include("../Footer.php");
+}
 function ParseIPv4($IPv4)
 {
 	$parts = explode("/", $IPv4);
@@ -129,6 +135,31 @@ if ($_SERVER['REQUEST_METHOD'] == "POST")
 			}
 		}
 	}
+}
+if (isset($_GET['id']))
+{
+	echo '<table class="table table-dark">';
+	echo '<thead class="thead-light"><tr>';
+	echo '<th>MAC</th>';
+	echo '<th>IPv4</th>';
+	echo '<th>Age</th>';
+	echo '<th>Delete</th>';
+	echo '</tr></thead>';
+
+	$rows = $db->Query("SELECT MAC, IPv4, Time FROM IP_Allocations WHERE VLANID = :VLANID", [':VLANID'=>$_GET['id']]);
+	while ($row = $rows->fetch())
+	{
+		echo '<tr>';
+		echo '<td>' . $row['MAC'] . '</td>';
+		echo '<td>' . $row['IPv4'] . '</td>';
+		echo '<td>' . gmdate("H:i:s", time() - $row['Time']) . '</td>';
+		if (time() - $row['Time'] > 600)
+			echo '<td class="text-center"><img src="/icons/delete.png" height="25" onclick="location.href=\'edit.php?id=' . $_GET['id'] . '&action=deleteMAC&MAC=' . $row['MAC'] . '\';" /></td>';
+		else
+			echo '<td></td>';
+		echo '</tr>';
+	}
+	echo '</table>';
 }
 ?>
 <form method="POST">
