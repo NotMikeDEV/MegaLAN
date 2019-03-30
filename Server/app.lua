@@ -6,7 +6,7 @@ network:AddNameserver("8.8.8.8")
 require("module/caddy")
 require("module/php")
 php.debug=true
-local Hostname = exec("hostname", true)
+local Hostname = exec("hostname -f", true)
 Hostname = exec("echo -n " .. Hostname, true)
 Mount{path='/www', type="map", source="/MegaLAN/www"}
 Mount{path='/MegaLAN/', type="map", source="/MegaLAN/"}
@@ -18,6 +18,7 @@ function install_container()
 	exec_or_die("npm install mysql")
 	exec_or_die("npm install sendmail")
 	exec_or_die("npm install ip6addr")
+	exec_or_die("npm install native-dns")
 	write_file("etc/Cloudflare", read_file("/etc/Cloudflare"))
 	return 0
 end
@@ -40,7 +41,7 @@ server:
 	}
 }
 
-]] .. Hostname .. [[.megalan.app:443 {
+]] .. Hostname .. [[:443 {
 	root /www
 	fastcgi / /run/php/php7.0-fpm.sock {
 			ext     .php
@@ -82,7 +83,8 @@ end
 function background()
 	exec("cd /root && caddy -conf /etc/Caddyfile -env /etc/Cloudflare -email notmike@notmike.co.uk -agree &")
 	exec("unbound &")
-	exec("cd /MegaLAN && while true; do ./UDPServer.js " .. Hostname .. ".megalan.app; sleep 1; done&")
+	exec("cd /MegaLAN && while true; do ./UDPServer.js " .. Hostname .. "; sleep 1; done&")
+	exec("cd /MegaLAN && while true; do ./DNSServer.js " .. Hostname .. "; sleep 1; done&")
 	exec("cd /MegaLAN && while true; do ./HTTPServer.js; sleep 1; done&")
 	return 0
 end
