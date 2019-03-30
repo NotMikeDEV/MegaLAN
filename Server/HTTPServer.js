@@ -67,11 +67,11 @@ var Handler = function (req, res) {
 					Message += "Once that is done, you can log in with your new password.\n\n";
 					Message += "If it wasn't you that requested this password reset, please ignore this email.\n\n";
 					sendmail({
-						to: row[0].Email,
-						from: "MegaLAN <No-Reply@MegaLAN.app>",
-						subject: "MegaLAN Password Reset",
-						text: Message,
-					},
+							to: row[0].Email,
+							from: "MegaLAN <No-Reply@MegaLAN.app>",
+							subject: "MegaLAN Password Reset",
+							text: Message,
+						},
 						function (err, result) {
 							if (err) console.log(err);
 							console.log("SENDMAIL RESULT", result);
