@@ -263,7 +263,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		trayIcon.hWnd = hWnd;
 		ShowWindow(::hWnd, SW_HIDE);
 		Shell_NotifyIcon(NIM_ADD, &trayIcon);
-		SetTimer(hWnd, 0, 60000, NULL);
+		SetTimer(hWnd, 0, 180000, NULL);
 		SetTimer(hWnd, 1, 1000, NULL);
 		SetTimer(hWnd, 2, 10000, NULL);
 		PostMessage(hWnd, WM_TIMER, 2, 0);
@@ -887,15 +887,15 @@ void Client::ReadPacket(BYTE* Buffer, WORD len)
 					Option += 6;
 					Option[0] = 51;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = htonl(3600);
+					*(DWORD*)(Option + 2) = htonl(180);
 					Option += 6;
 					Option[0] = 58;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = htonl(1800);
+					*(DWORD*)(Option + 2) = htonl(120);
 					Option += 6;
 					Option[0] = 59;
 					Option[1] = 4;
-					*(DWORD*)(Option + 2) = htonl(2400);
+					*(DWORD*)(Option + 2) = htonl(150);
 					Option += 6;
 					Option[0] = 1;
 					Option[1] = 4;
