@@ -1,6 +1,6 @@
 <?php
 error_reporting(E_ALL);
-ini_set('default_charset', 'UTF8');
+ini_set('default_charset', 'utf-8');
 class Database
 {
 	private $connection;
