@@ -31,4 +31,4 @@ function DoServer(server) {
 }
 DoServer("uk.megalan.app");
 DoServer("la.megalan.app");
-DoServer("ny.megalan.app");
+DoServer("ch.megalan.app");
