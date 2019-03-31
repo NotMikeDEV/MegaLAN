@@ -85,7 +85,7 @@ end
 
 function background()
 	exec("unbound &")
-	exec("cd /MegaLAN && while true; do ./UDPServer.js " .. ServerName .. "." .. DomainName .. "; sleep 1; done&")
+	exec("cd /MegaLAN && while true; do ./UDPServer.js " .. DomainName .. "; sleep 1; done&")
 	exec("cd /MegaLAN && while true; do ./DNSServer.js " .. ServerName .. " " .. DomainName .. " " .. IPv4 .. " " .. IPv6 .. "; sleep 1; done&")
 	exec("export RFC2136_NAMESERVER=127.0.0.1:99; sleep 2; cd /root && for i in {1..10}; do caddy -quic -conf /etc/Caddyfile -email admin@megalan.app -agree; sleep 1; done&")
 	exec("cd /MegaLAN && while true; do ./HTTPServer.js; sleep 1; done&")
