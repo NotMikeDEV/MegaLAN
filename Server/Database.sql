@@ -2,8 +2,6 @@
 SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
-CREATE DATABASE IF NOT EXISTS `MegaLAN` DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
-USE `MegaLAN`;
 
 CREATE TABLE `Accounts` (
   `Username` varchar(100) COLLATE utf8_bin NOT NULL,
@@ -17,12 +15,32 @@ CREATE TABLE `Accounts` (
   `Token` varchar(20) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+CREATE TABLE `DNS` (
+  `Hostname` text COLLATE utf8_bin NOT NULL,
+  `Type` int(11) NOT NULL,
+  `Value` text COLLATE utf8_bin NOT NULL,
+  `Expire` bigint(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE `IP_Allocations` (
   `VLANID` varchar(40) COLLATE utf8_bin NOT NULL,
   `MAC` varchar(12) COLLATE utf8_bin NOT NULL,
   `IPv4` mediumtext COLLATE utf8_bin NOT NULL,
   `IPv6` mediumtext COLLATE utf8_bin NOT NULL,
   `Time` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `Servers` (
+  `ServerName` text COLLATE utf8_bin NOT NULL,
+  `IP` text COLLATE utf8_bin NOT NULL,
+  `Up` tinyint(1) NOT NULL,
+  `HeartBeatTime` bigint(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `Sessions` (
+  `SID` varchar(120) COLLATE utf8_bin NOT NULL,
+  `Data` text COLLATE utf8_bin DEFAULT NULL,
+  `Timestamp` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE `VLANs` (
@@ -58,10 +76,19 @@ ALTER TABLE `Accounts`
   ADD KEY `VerifyKey` (`VerifyKey`),
   ADD KEY `Token` (`Token`);
 
+ALTER TABLE `DNS`
+  ADD UNIQUE KEY `Hostname` (`Hostname`(512),`Type`);
+
 ALTER TABLE `IP_Allocations`
   ADD UNIQUE KEY `PEERID` (`VLANID`,`MAC`),
   ADD KEY `VLANID` (`VLANID`),
   ADD KEY `Time` (`Time`);
+
+ALTER TABLE `Servers`
+  ADD UNIQUE KEY `ServerName` (`ServerName`(100),`IP`(100));
+
+ALTER TABLE `Sessions`
+  ADD UNIQUE KEY `SID` (`SID`);
 
 ALTER TABLE `VLANs`
   ADD PRIMARY KEY (`ROWID`),
