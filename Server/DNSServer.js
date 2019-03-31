@@ -17,17 +17,43 @@ var database = mysql.createPool({
 	database: 'MegaLAN'
 });
 
-setInterval(function () {
-	if (IPv4 && IPAddr.parse(IPv4))
-		database.query("REPLACE INTO Servers (ServerName, IP, HeartBeatTime) VALUES (?, ?, ?)", [ServerName, IPv4, Math.floor(new Date())], function (err) { if (err) console.log(err); });
-	if (IPv6 && IPAddr.parse(IPv6))
-		database.query("REPLACE INTO Servers (ServerName, IP, HeartBeatTime) VALUES (?, ?, ?)", [ServerName, IPv6, Math.floor(new Date())], function (err) { if (err) console.log(err); });
+var HeartBeat = function () {
+	const https = require('https');
+	const options = {
+		port: 443,
+		host: ServerName + "." + DomainName,
+		method: 'GET',
+		path: '/'
+	};
+	var Request = https.request(options)
+		.on("error", (err) => {
+			console.log("HeartBeat", err.message);
+			if (IPv4 && IPAddr.parse(IPv4))
+				database.query("REPLACE INTO Servers (ServerName, IP, Up, HeartBeatTime) VALUES (?, ?, 0, ?)", [ServerName, IPv4, Math.floor(new Date())], function (err) { if (err) console.log(err); });
+			if (IPv6 && IPAddr.parse(IPv6))
+				database.query("REPLACE INTO Servers (ServerName, IP, Up, HeartBeatTime) VALUES (?, ?, 0, ?)", [ServerName, IPv6, Math.floor(new Date())], function (err) { if (err) console.log(err); });
+		})
+		.on('response', (response) => {
+			console.log("HeartBeat OK");
+			if (IPv4 && IPAddr.parse(IPv4))
+				database.query("REPLACE INTO Servers (ServerName, IP, Up, HeartBeatTime) VALUES (?, ?, 1, ?)", [ServerName, IPv4, Math.floor(new Date())], function (err) { if (err) console.log(err); });
+			if (IPv6 && IPAddr.parse(IPv6))
+				database.query("REPLACE INTO Servers (ServerName, IP, Up, HeartBeatTime) VALUES (?, ?, 1, ?)", [ServerName, IPv6, Math.floor(new Date())], function (err) { if (err) console.log(err); });
+		}).end();
 	database.query("DELETE FROM Servers WHERE HeartBeatTime < ?", [Math.floor(new Date()) - 90000], function (err) { if (err) console.log(err); });
-	database.query("DELETE FROM DNS WHERE Expire < ?", [Math.floor(new Date())], function (err) { if (err) console.log(err); });
-}, 60000);
-database.query("REPLACE INTO Servers (ServerName, IP, HeartBeatTime) VALUES (?, ?, ?)", [ServerName, IPv4, Math.floor(new Date())], function (err) { if (err) console.log(err); });
-database.query("REPLACE INTO Servers (ServerName, IP, HeartBeatTime) VALUES (?, ?, ?)", [ServerName, IPv6, Math.floor(new Date())], function (err) { if (err) console.log(err); });
-database.query("DELETE FROM DNS WHERE Expire < ?", [Math.floor(new Date())], function (err) { if (err) console.log(err); });
+	database.query("DELETE FROM DNS WHERE Expire < ?", [Math.floor(new Date() / 1000)], function (err) { if (err) console.log(err); });
+};
+setInterval(HeartBeat, 60000);
+database.query("DELETE FROM Servers WHERE ServerName = ?", [ServerName], function (err) {
+	if (err)
+		return console.log(err);
+	if (IPv4 && IPAddr.parse(IPv4))
+		database.query("REPLACE INTO Servers (ServerName, IP, Up, HeartBeatTime) VALUES (?, ?, 0, ?)", [ServerName, IPv4, Math.floor(new Date())], function (err) { if (err) console.log(err); });
+	if (IPv6 && IPAddr.parse(IPv6))
+		database.query("REPLACE INTO Servers (ServerName, IP, Up, HeartBeatTime) VALUES (?, ?, 0, ?)", [ServerName, IPv6, Math.floor(new Date())], function (err) { if (err) console.log(err); });
+	setTimeout(HeartBeat, 5000);
+});
+
 
 var DNSHandler = function (request, response) {
 	var question = request.question[0];
@@ -53,11 +79,13 @@ var DNSHandler = function (request, response) {
 		database.query("SELECT Hostname, Type, Value, Expire FROM DNS WHERE Hostname = ? AND Type = 16", [hostname], function (err, Data) {
 			if (err) console.log(err);
 			for (x in Data)
+			{
 				response.answer.push(dns.TXT({
 					name: hostname,
 					data: [Data[x].Value],
-					ttl: 3,
+					ttl: 5,
 				}));
+			}
 			response.send();
 		});
 	}
@@ -82,45 +110,52 @@ var DNSHandler = function (request, response) {
 				response.send();
 			}
 			else {
-				database.query("SELECT ServerName, IP FROM Servers", function (err, result) {
+				database.query("SELECT ServerName, IP FROM Servers WHERE Up = 1", function (err, result) {
+					var DoneNS = {};
 					for (var x in result) {
 						var IP = IPAddr.parse(result[x].IP);
-						if (IP.kind() == 'ipv4' && (question.type == 1 || question.type == 255)) {
-							response.answer.push(dns.A({
-								name: hostname,
-								address: IP.toString(),
-								ttl: 30,
-							}));
+						if (IP.kind() == 'ipv4') {
+							if (question.type == 1 || question.type == 255)
+								response.answer.push(dns.A({
+									name: hostname,
+									address: IP.toString(),
+									ttl: 30,
+								}));
 							response.additional.push(dns.A({
 								name: result[x].ServerName + "." + DomainName,
 								address: IP.toString(),
 								ttl: 300,
 							}));
 						}
-						if (IP.kind() == 'ipv6' && (question.type == 28 || question.type == 255)) {
-							response.answer.push(dns.AAAA({
-								name: hostname,
-								address: IP.toString(),
-								ttl: 30,
-							}));
+						if (IP.kind() == 'ipv6') {
+							if (question.type == 28 || question.type == 255)
+								response.answer.push(dns.AAAA({
+									name: hostname,
+									address: IP.toString(),
+									ttl: 30,
+								}));
 							response.additional.push(dns.AAAA({
 								name: result[x].ServerName + "." + DomainName,
 								address: IP.toString(),
 								ttl: 300,
 							}));
 						}
-						if (question.type == 2)
-							response.answer.push(dns.NS({
-								name: hostname,
-								data: result[x].ServerName + "." + DomainName,
-								ttl: 300,
-							}));
-						else
-							response.authority.push(dns.NS({
-								name: hostname,
-								data: result[x].ServerName + "." + DomainName,
-								ttl: 300,
-							}));
+						if (!DoneNS[result[x].ServerName])
+						{
+							if (question.type == 2)
+								response.answer.push(dns.NS({
+									name: hostname,
+									data: result[x].ServerName + "." + DomainName,
+									ttl: 300,
+								}));
+							else
+								response.authority.push(dns.NS({
+									name: hostname,
+									data: result[x].ServerName + "." + DomainName,
+									ttl: 300,
+								}));
+							DoneNS[result[x].ServerName] = true;
+						}
 					}
 					response.send();
 				});
@@ -148,32 +183,23 @@ var RFC2136Handler = function (request, response) {
 	var question = request.question[0];
 	var hostname = question.name.toLowerCase();
 	console.log("RFC2136", question);
-	response.answer.push(dns.SOA({
-		name: hostname,
-		ttl: 300,
-		primary: 'MegaLAN',
-		admin: 'MegaLAN',
-		serial: 1,
-		refresh: 600,
-		retry: 600,
-		expiration: 3600,
-		minimum: 5,
-	}));
 	if (request.authority && request.authority.length)
 	{
 		for (var x in request.authority)
 		{
-			if (request.authority[x].ttl && request.authority[x].class == 1)
+			if (request.authority[x].ttl && request.authority[x].type == 16 && request.authority[x].class == 1)
 			{
-				database.query("REPLACE INTO DNS (Hostname, Type, Value, Expire) VALUES (?, ?, ?, ?)", [request.authority[x].name, request.authority[x].type, request.authority[x].data, Math.floor(new Date()) + (request.authority[x].ttl * 1000)], function (err) {
+				database.query("REPLACE INTO DNS (Hostname, Type, Value, Expire) VALUES (?, ?, ?, ?)", [request.authority[x].name, request.authority[x].type, request.authority[x].data, Math.floor(new Date()/1000) + (request.authority[x].ttl)], function (err) {
 					if (err)
 						console.log(err);
 					else
 						response.send();
 				});
+				return;
 			}
 		}
 	}
+	DNSHandler(request, response);
 };
 var RFC2136UDP = dns.createUDPServer({ dgram_type: 'udp4' }).on('request', RFC2136Handler).on('error', ErrorHandler);
 console.log("RFC2136 UDP", RFC2136UDP.serve(99, "127.0.0.1"));
