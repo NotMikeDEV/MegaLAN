@@ -5,6 +5,7 @@ network:AddNameserver("9.9.9.9")
 network:AddNameserver("8.8.8.8")
 require("module/caddy")
 require("module/php")
+php.debug=true
 
 local ServerName = exec("hostname -s", true)
 ServerName = exec("echo -n " .. ServerName, true)
@@ -47,19 +48,17 @@ server:
 	}
 }
 
-]] .. ServerName .. "." .. DomainName .. [[:443 {
+*.]] .. DomainName .. [[:443 {
 	root /www
 	fastcgi / /run/php/php7.0-fpm.sock {
-			ext     .php
-			split   .php
-			index   index.php
+		ext     .php
+		split   .php
+		index   index.php
 	}
-	log /var/log/caddy.log {
-			rotate_size 5
-			rotate_age  14
-			rotate_keep 20
-	}
+	log /dev/stdout
 	tls {
+#		ca https://acme-staging-v02.api.letsencrypt.org/directory
+		ca https://acme-v02.api.letsencrypt.org/directory
 		dns rfc2136
 	}
 	header / Strict-Transport-Security "max-age=31536000;"
@@ -72,12 +71,10 @@ server:
 		split   .php
 		index   index.php
 	}
-	log /var/log/caddy.log {
-		rotate_size 5
-		rotate_age  14
-		rotate_keep 20
-	}
+	log /dev/stdout
 	tls {
+#		ca https://acme-staging-v02.api.letsencrypt.org/directory
+		ca https://acme-v02.api.letsencrypt.org/directory
 		dns rfc2136
 	}
 	header / Strict-Transport-Security "max-age=31536000;"
@@ -90,7 +87,7 @@ function background()
 	exec("unbound &")
 	exec("cd /MegaLAN && while true; do ./UDPServer.js " .. ServerName .. "." .. DomainName .. "; sleep 1; done&")
 	exec("cd /MegaLAN && while true; do ./DNSServer.js " .. ServerName .. " " .. DomainName .. " " .. IPv4 .. " " .. IPv6 .. "; sleep 1; done&")
-	exec("export RFC2136_NAMESERVER=127.0.0.1:99; sleep 2; cd /root && while true; do caddy -conf /etc/Caddyfile -email notmike@notmike.co.uk -agree; sleep 1; done&")
+	exec("export RFC2136_NAMESERVER=127.0.0.1:99; sleep 2; cd /root && for i in {1..10}; do caddy -quic -conf /etc/Caddyfile -email admin@megalan.app -agree; sleep 1; done&")
 	exec("cd /MegaLAN && while true; do ./HTTPServer.js; sleep 1; done&")
 	return 0
 end
