@@ -214,7 +214,7 @@ if (isset($_GET['id']))
 	</div>
 	<div class="form-label-group">
 		<label for="Password">Password</label>
-		<input name="Password" id="Password" type="password" class="form-control" placeholder="Password" value="<?php echo $VLAN['Password'];?>">
+		<input name="Password" id="Password" type="password" class="form-control" placeholder="No Password" value="<?php echo $VLAN['Password'];?>">
 	</div>
 	<div class="form-label-group">
 		<label for="IPv4">IPv4 Subnet (10.0.0.0/8)</label>
