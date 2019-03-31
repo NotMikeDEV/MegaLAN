@@ -139,8 +139,8 @@ void Client::Start()
 		MessageBox(hDlg, L"Error getting adaptor info.\n", L"Error", MB_ICONERROR);
 		return;
 	}
-
 	free(pAddressIP);
+	Socket.Setp2pKey(Key);
 	SendRegister();
 }
 void Client::SendRegister()
