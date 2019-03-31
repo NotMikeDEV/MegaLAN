@@ -13,12 +13,12 @@ session_start();
 		<meta name="theme-color" id="theme" content="#003399">
 		<link rel="shortcut icon" type="image/ico" href="/favicon.ico">
 		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" crossorigin="anonymous">
+		<link rel="stylesheet" href="/StyleSheet.css">
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
 		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" crossorigin="anonymous"></script>
-		<link rel="stylesheet" href="/StyleSheet.css">
 	</head>
 	<body class="text-center">
-			<div class="cover-container d-flex h-100 p-3 mx-auto flex-column">
+			<div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
 				<header class="masthead mb-auto">
 					<div class="inner">
 						<h3 class="masthead-brand">MegaLAN</h3>
