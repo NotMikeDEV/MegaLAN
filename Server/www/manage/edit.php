@@ -2,8 +2,7 @@
 $Page = "manage";
 $Title = "VLAN Management";
 include("../Header.php");
-include("../Database.php");
-$db = new Database();
+global $db;
 if (!isset($_SESSION['User']))
 {
 	header("Location: .");

@@ -2,7 +2,7 @@
 $Page = "manage";
 $Title = "VLAN Management";
 include("../Header.php");
-include("../Database.php");
+global $db;
 if ($_SERVER['QUERY_STRING'] == "LogOut")
 {
 	session_destroy();
@@ -14,7 +14,6 @@ if (!isset($_SESSION['User']))
 	if (isset($_POST['Username']) && isset($_POST['Password']))
 	{
 		$PasswordHash = sha1($_POST['Username'].$_POST['Password'], false);
-		$db = new Database();
 		$user = $db->Query("SELECT Username, UserHash, Email, IsAdmin FROM Accounts WHERE Username = :Username AND PasswordHash = :PasswordHash", [':Username'=>$_POST['Username'], ':PasswordHash'=>$PasswordHash])->fetch();
 		if (!$user)
 		{
@@ -45,7 +44,6 @@ if (!isset($_SESSION['User']))
 }
 else
 {
-	$db = new Database();
 	$VLANs = $db->Query("SELECT VLANID FROM VLANs WHERE Owner = :UserHash ORDER BY ROWID", [':UserHash'=>$_SESSION['User']['UserHash']])->fetchAll();
 	if ($_SESSION['User']['IsAdmin'])
 		$VLANs = $db->Query("SELECT VLANID FROM VLANs ORDER BY ROWID")->fetchAll();

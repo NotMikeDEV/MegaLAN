@@ -18,3 +18,5 @@ class Database
 		return $stmt;
 	}
 }
+global $db;
+$db = new Database();

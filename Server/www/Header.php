@@ -2,7 +2,7 @@
 header("Content-Type: text/html; charset=utf-8");
 ob_start();
 error_reporting(E_ALL);
-session_start();
+require("Session.php");
 ?>
 <!DOCTYPE html>
 <html lang="en">
