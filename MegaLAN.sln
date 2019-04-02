@@ -9,6 +9,8 @@ Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "Server", "Server\Server.njs
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{84A55286-1A58-4653-94BB-777FBC53B4CE}"
 	ProjectSection(SolutionItems) = preProject
+		Installer-32bit.nsi = Installer-32bit.nsi
+		Installer-64bit.nsi = Installer-64bit.nsi
 		Protocol.md = Protocol.md
 	EndProjectSection
 EndProject
