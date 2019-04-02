@@ -89,6 +89,15 @@ var DNSHandler = function (request, response) {
 			response.send();
 		});
 	}
+	else if (question.type == 16)
+	{
+		response.answer.push(dns.TXT({
+			name: hostname,
+			data: ["v=spf1 a:" + DomainName + " -all"],
+			ttl: 5,
+		}));
+		response.send();
+	}
 	else if (question.type == 1 || question.type == 28 || question.type == 2 || question.type == 255) {
 		database.query("SELECT ServerName, IP FROM Servers WHERE ServerName = ? ORDER BY RAND()", [Host[0]], function (err, result) {
 			if (result.length) {
