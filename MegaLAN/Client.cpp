@@ -176,7 +176,7 @@ void Client::OpenDevice()
 		LPWSTR messageBuffer = nullptr;
 		size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&messageBuffer, 0, NULL);
-		MessageBox(hDlg, messageBuffer, L"Error opening device.", MB_ICONERROR);
+		MessageBox(hDlg, messageBuffer, L"Error opening Ethernet device.", MB_ICONERROR);
 		LocalFree(messageBuffer);
 		return;
 	}
@@ -185,7 +185,7 @@ void Client::OpenDevice()
 	DeviceIoControl(Device, TAP_CONTROL_CODE(6, 0), &Status, sizeof(Status), &Status, sizeof(Status), &Ret, NULL);
 	if (!(Ret == Status == 1))
 	{
-		MessageBox(hDlg, L"There was an error connecting the virtual cable.", L"Error opening device.", MB_ICONERROR);
+		MessageBox(hDlg, L"There was an error connecting the virtual cable.", L"Error opening Ethernet device.", MB_ICONERROR);
 		return;
 	}
 	Thread = CreateThread(NULL, 1024 * 1024, Client::ThreadProc, (LPVOID)this, 0, NULL);
@@ -623,7 +623,7 @@ void Client::RecvPacketFromServer(struct InboundUDP &Packet)
 //		inet_ntop(AF_INET6, &IPv6_Address, IPv6, sizeof(IPv6));
 		if (Device == INVALID_HANDLE_VALUE)
 			OpenDevice();
-		if (!hWnd)
+		if (!hWnd && Device != INVALID_HANDLE_VALUE)
 		{
 			CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_CLIENT), ::hWnd, Client::WndProc, (LPARAM)this);
 		}
