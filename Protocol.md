@@ -1,6 +1,8 @@
-# Protocol Specification
+All communication is over UDP.
 
-## Client / Server communication
+Servers listen on port 55555, clients use dynamic ports.
+
+# Client / Server communication
 
 Format is [Field Name:Length]
 
@@ -14,7 +16,7 @@ Format is [Field Name:Length]
 
 Strings are NULL-terminated UTF8. (noted as N bytes)
 
-### Authentication
+## Authentication
 
 Client > Server
 
@@ -28,7 +30,7 @@ Server > Client (Failure)
 
 ["AUTH":4]
 
-### Create Account
+## Create Account
 
 Client > Server
 
@@ -40,7 +42,7 @@ Server > Client
 
 Client should then open the received URL.
 
-### Forgot Password
+## Forgot Password
 
 Client > Server
 
@@ -52,7 +54,7 @@ Server > Client
 
 Client should then open the received URL.
 
-### VLAN Listing
+## VLAN Listing
 
 Initial request [Mark] is 0x00000000, client will repeat requests with the Mark from the last response until a [Count] of 0 is received.
 
@@ -74,7 +76,7 @@ Server > Client
 
 **["INFO":4][VLANID:20][Name:N][Description:N][PasswordProtected:1]**
 
-### Join VLAN
+## Join VLAN
 
 Client > Server
 
@@ -88,7 +90,7 @@ or
 
 **["EROR":4][Error Message:N]**
 
-#### Register with VLAN
+### Register with VLAN
 
 Sent on intial connect, and periodically to refresh new peers. (Currently at least every 5 minuts)
 
@@ -102,7 +104,7 @@ Server > Client
 
 Followed by the server sending Peer Notifications for and to each peer.
 
-#### Peer Notification
+### Peer Notification
 
 IPv4 addresses are sent as "IPv4 mapped addresses", aka IPv6 format.
 
@@ -110,7 +112,7 @@ Server > Client
 
 ["VLAN":4]**[VLANID:20][UserID:20][MAC:6][IP:16][Port:2]**
 
-#### Peer Identification
+### Peer Identification
 
 Used to get peer name (used in response to initial Peer Notification).
 
@@ -121,3 +123,47 @@ Client > Server
 Server > Client
 
 ["PEER":4]**[Peer UserID:20][Username:N]**
+
+# VLAN p2p Communication
+
+All p2p communication is encrypted with the sha256 of the password. If no password is specified then a NULL key is used. (0000...0000)
+
+Initial communication involves exchanging a list of other known peers to suppliment the list received from the server.
+
+## LAN Discovery
+
+LAN Discovery requires the client to listen on port 55555 in addition to its "working port".
+Broadcast packets are sent to port 55555 on the subnet broadcast address of all connected interfaces.
+LAN Discovery is only used for IPv4.
+
+LAN Discovery Request (broadcast):
+
+["LAND":4][VLANID:20]
+
+LAN Discovery Reply:
+
+["LANR":4][UserID:20][MAC:6][Peer Count:2]{[PeerUserID:20][PeerMAC:6][PeerIP:16][PeerPort:2]}:PeerCount
+
+## Connection
+
+Initial connection request:
+
+["INIT":4][VLANID:20]
+
+INIT reply:
+
+["PONG":4][UserID:20][MAC:6][Peer Count:2]{[PeerUserID:20][PeerMAC:6][PeerIP:16][PeerPort:2]}:PeerCount
+
+Note: Receiving node should add the source IP and port to its list of prospective peers, and send an INIT packet back.
+
+## KeepAlive/HeartBeat
+
+["PING":4][VLANID:20]
+
+PING Reply:
+
+["PONG":4][UserID:20][MAC:6]
+
+## Ethernet Packet (Includes TunTap header)
+
+["ETHN":4][Header:4][EthernetFrame:N]
