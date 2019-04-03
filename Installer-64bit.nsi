@@ -42,7 +42,6 @@ Section "MegaLAN (required)" ;No components page, name is not important
 	SetOutPath $INSTDIR
 	SetOverwrite on
 	CreateShortcut "$SMPROGRAMS\MegaLAN.lnk" "$INSTDIR\MegaLAN.exe" "" "$INSTDIR\MegaLAN.exe" 0
-	CreateShortcut "$DESKTOP\MegaLAN.lnk" "$INSTDIR\MegaLAN.exe" "" "$INSTDIR\MegaLAN.exe" 0
 
 	File "x64\Release\MegaLAN.exe"
 	File "Root\64bit\tapinstall.exe"
