@@ -20,7 +20,8 @@ RequestExecutionLevel admin
 ;--------------------------------
 
 ; Pages
-
+LicenseData "LICENSE"
+Page license
 Page components
 Page directory
 Page instfiles
