@@ -35,7 +35,7 @@ if (!isset($_SESSION['User']))
 		<input name="Username" id="Username" type="text" class="form-control" placeholder="Username" required autofocus>
 	</div>
 	<div class="form-label-group">
-		<label for="Password">Password.</label>
+		<label for="Password">Password</label>
 		<input name="Password" id="Password" type="password" class="form-control" placeholder="Password" required>
 	</div>
 	<button class="btn btn-lg btn-primary btn-block" type="submit">Log In</button>
