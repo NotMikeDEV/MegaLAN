@@ -94,13 +94,17 @@ or
 
 Sent on intial connect, and periodically to refresh new peers. (Currently at least every 5 minuts)
 
-Client > Server
+Client > Server (Part of RGST request is encrypted with VLAN Key (SHA256 of password))
 
-["RGST":4][UserID:20][VLANID:20]
+["RGST":4][UserID:20][VLANID:20]***["LETMEIN":7][MAC:6][IP Count:1]{[IP:16][Port:2]}:IP Count***
 
 Server > Client
 
 ["RGST":4]**[VLANID:20][IPv4:4][IPv4 Prefix:1][IPv6:16][IPv6 Prefix:1]**
+
+or
+
+**["EROR":4][Error Message:N]**
 
 Followed by the server sending Peer Notifications for and to each peer.
 
@@ -138,7 +142,7 @@ LAN Discovery is only used for IPv4.
 
 LAN Discovery Request (broadcast):
 
-["LAND":4][VLANID:20]
+["LAND":4][VLANID:20][UserID:20][MAC:6]
 
 LAN Discovery Reply:
 
@@ -148,7 +152,7 @@ LAN Discovery Reply:
 
 Initial connection request:
 
-["INIT":4][VLANID:20]
+["INIT":4][VLANID:20][UserID:20][MAC:6]
 
 INIT reply:
 
@@ -158,12 +162,12 @@ Note: Receiving node should add the source IP and port to its list of prospectiv
 
 ## KeepAlive/HeartBeat
 
-["PING":4][VLANID:20]
+["PING":4][VLANID:20][UserID:20][MAC:6]
 
 PING Reply:
 
 ["PONG":4][UserID:20][MAC:6]
 
-## Ethernet Packet (Includes TunTap header)
+## Ethernet Packet
 
-["ETHN":4][Header:4][EthernetFrame:N]
+["ETHN":4][EthernetFrame:N]
