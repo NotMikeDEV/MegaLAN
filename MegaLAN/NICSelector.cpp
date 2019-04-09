@@ -28,6 +28,7 @@ struct NIC NICSelector::Run()
 	RegSetKeyValue(MyKey, NULL, L"SelectedNIC", REG_SZ, SelectedNIC.ID.c_str(), SelectedNIC.ID.length()*2 + 2);
 	RegCloseKey(Key);
 	RegCloseKey(MyKey);
+	wprintf(L"Selected NIC %s\n", SelectedNIC.ID.c_str());
 	return SelectedNIC;
 }
 

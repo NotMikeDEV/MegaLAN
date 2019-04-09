@@ -43,6 +43,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 	SetCurrentDirectory(path);
 
+	printf("Statup\n");
 	// Initialize global strings
     MyRegisterClass(hInstance);
 
@@ -55,6 +56,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg;
 	if (lstrcmpW(lpCmdLine, L"/Autorun") == 0)
 	{
+		printf("Autorun\n");
 		const LPCWSTR Software = L"Software\\MegaLAN";
 		HKEY Key;
 		RegOpenKey(HKEY_CURRENT_USER, Software, &Key);
@@ -85,11 +87,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			&IDBytes[10], &IDBytes[11], &IDBytes[12], &IDBytes[13], &IDBytes[14], &IDBytes[15], &IDBytes[16], &IDBytes[17], &IDBytes[18], &IDBytes[19]);
 		if (VLANLen && VLANIDLen && VLANKeyLen)
 		{
+			printf("Auto join\n");
 			VPNClient = new Client(IDBytes, VLAN);
 			VPNClient->Login(KeyBytes);
 		}
-//		VPNClient = new Client(ID, ;
-//		PostQuitMessage(0);
 	}
 
 	// Main message loop:

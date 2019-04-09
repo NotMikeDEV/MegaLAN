@@ -35,4 +35,5 @@
 #include "resource.h"
 #ifndef _DEBUG
 #define printf(...)
+#define wprintf(...)
 #endif
