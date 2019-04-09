@@ -1,4 +1,5 @@
 #include "NICSelector.h"
+#include "Crypto.h"
 #include "UDPSocket.h"
 #include "Login.h"
 #include "Peer.h"

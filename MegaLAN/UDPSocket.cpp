@@ -3,7 +3,6 @@
 #include <codecvt>
 #include <locale>
 #include "MegaLAN.h"
-#include "Crypto.h"
 
 void UDPSocket::Start()
 {
@@ -59,7 +58,7 @@ void UDPSocket::LANSocketEventMessage()
 	memset(Buffer, 0, sizeof(Buffer));
 	int ret = recvfrom(LANSocket, (char*)Buffer, sizeof(Buffer), 0, (sockaddr*)&from, &fromlen);
 
-	if (VPNClient && (ret = Crypt.AES256_Decrypt(Buffer, ret, p2pKey)))
+	if (VPNClient && VPNClient->p2pCrypto && (ret = VPNClient->p2pCrypto->AES256_Decrypt(Buffer, ret)))
 	{
 		char IP[128];
 		inet_ntop(AF_INET6, &from.sin6_addr, IP, sizeof(IP));
@@ -96,7 +95,7 @@ void UDPSocket::SocketEventMessage()
 	if (ret >= 4 && memcmp(Buffer, "AUTH", 4) == 0)
 	{
 		printf("Recv %c%c%c%c (%u bytes) from server\n", Buffer[0], Buffer[1], Buffer[2], Buffer[3], ret);
-		if (ret = Crypt.AES256_Decrypt(Buffer + 4, ret - 4, AuthKey))
+		if (ret = ServerCrypto->AES256_Decrypt(Buffer + 4, ret - 4))
 		{
 			for (int x = 0; x < ret + 4; x++)
 				printf("%02X ", (BYTE)Buffer[x]);
@@ -119,7 +118,7 @@ void UDPSocket::SocketEventMessage()
 	else if (VPNClient && (memcmp(Buffer, "RGST", 4) == 0 || memcmp(Buffer, "VLAN", 4) == 0 || memcmp(Buffer, "PEER", 4) == 0))
 	{
 		printf("Recv (%u bytes) for VPN Client\n", ret);
-		if (ret = Crypt.AES256_Decrypt(Buffer + 4, ret - 4, AuthKey))
+		if (ret = ServerCrypto->AES256_Decrypt(Buffer + 4, ret - 4))
 		{
 			for (int x = 0; x < ret + 4; x++)
 				printf("%02X ", (BYTE)Buffer[x]);
@@ -133,7 +132,7 @@ void UDPSocket::SocketEventMessage()
 	}
 	else if (ret > 0 && memcmp(&from, &Server, sizeof(Server)) == 0)
 	{
-		if (ret = Crypt.AES256_Decrypt(Buffer, ret, AuthKey))
+		if (ret = ServerCrypto->AES256_Decrypt(Buffer, ret))
 		{
 			char Type[5] = { 0 };
 			memcpy(Type, Buffer, 4);
@@ -150,7 +149,7 @@ void UDPSocket::SocketEventMessage()
 	}
 	else if (ret > 0)
 	{
-		if (VPNClient && (ret = Crypt.AES256_Decrypt(Buffer, ret, p2pKey)))
+		if (VPNClient && VPNClient->p2pCrypto && (ret = VPNClient->p2pCrypto->AES256_Decrypt(Buffer, ret)))
 		{
 			char IP[128];
 			inet_ntop(AF_INET6, &from.sin6_addr, IP, sizeof(IP));
@@ -178,7 +177,9 @@ void UDPSocket::SetAuthID(BYTE* Key)
 }
 void UDPSocket::SetAuthKey(BYTE* Key)
 {
-	memcpy(AuthKey, Key, sizeof(AuthKey));
+	if (ServerCrypto)
+		delete ServerCrypto;
+	ServerCrypto = new Crypto(Key);
 }
 void UDPSocket::SendToServer(char Type[4], BYTE* Payload, int PayloadLength)
 {
@@ -198,11 +199,6 @@ void UDPSocket::SendToServer(char Type[4], BYTE* Payload, int PayloadLength)
 	sendto(Socket, (char*)Buffer, 24+PayloadLength, 0, (struct sockaddr*)&Server, sizeof(Server));
 }
 
-void UDPSocket::Setp2pKey(BYTE* Key)
-{
-	memcpy(p2pKey, Key, sizeof(p2pKey));
-}
-
 void UDPSocket::SendToPeer(struct sockaddr_in6 &Addr, BYTE* Payload, int PayloadLength)
 {
 	BYTE Buffer[4096] = { 0 };
@@ -211,14 +207,14 @@ void UDPSocket::SendToPeer(struct sockaddr_in6 &Addr, BYTE* Payload, int Payload
 	char TypeT[5] = { 0 };
 	memcpy(TypeT, Payload, 4);
 	printf("Sending %s %d to peer %s %u with key ", TypeT, PayloadLength, IP, htons(Addr.sin6_port));
-	for (int x = 0; x < sizeof(p2pKey); x++)
-		printf("%02X ", p2pKey[x]);
+	for (int x = 0; x < sizeof(VPNClient->p2pCrypto->Key); x++)
+		printf("%02X ", VPNClient->p2pCrypto->Key[x]);
 	printf("\n");
 	if (PayloadLength)
 	{
 		memcpy(Buffer, Payload, PayloadLength);
 	}
-	int Len = Crypt.AES256_Encrypt(Buffer, PayloadLength, p2pKey);
+	int Len = VPNClient->p2pCrypto->AES256_Encrypt(Buffer, PayloadLength);
 	sendto(Socket, (char*)Buffer, Len, 0, (struct sockaddr*)&Addr, sizeof(Addr));
 }
 
@@ -258,12 +254,12 @@ void UDPSocket::SendLogin(std::wstring Username, std::wstring Password, std::wst
 	std::string Login(User);
 	Login.append(Pass);
 	memcpy(Buffer, "AUTH", 4);
-	BYTE* SHA1 = Crypt.SHA1(User);
+	BYTE* SHA1 = Crypto::SHA1(User);
 	memcpy(Buffer + 4, SHA1, 20);
 	SetAuthID(SHA1);
-	SHA1 = Crypt.SHA1(Login);
+	SHA1 = Crypto::SHA1(Login);
 	memcpy(Buffer + 24, SHA1, 20);
-	BYTE* SHA256 = Crypt.SHA256(Login);
+	BYTE* SHA256 = Crypto::SHA256(Login);
 	SetAuthKey(SHA256);
 	SendRawToServers(Server, Buffer, 44);
 	MyExternalAddresses.clear();

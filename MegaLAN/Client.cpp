@@ -6,7 +6,6 @@ Client::Client(BYTE* ID, std::wstring Name)
 {
 	this->Name = Name;
 	memcpy(this->ID, ID, 20);
-	memset(this->Key, 0, sizeof(this->Key));
 }
 
 Client::~Client()
@@ -23,6 +22,8 @@ Client::~Client()
 	{
 		SendMessage(hWnd, WM_CLOSE, 0, 0);
 	}
+	if (p2pCrypto)
+		delete p2pCrypto;
 }
 
 void Client::Login(bool Password)
@@ -32,12 +33,14 @@ void Client::Login(bool Password)
 		DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_PASSWORD), ::hWnd, Client::PasswordWndProc, (LPARAM)this);
 	}
 	else
-		Start();
+	{
+		BYTE NullKey[32] = { 0 };
+		Start(NullKey);
+	}
 }
 void Client::Login(BYTE* Key)
 {
-	memcpy(this->Key, Key, 32);
-	Start();
+	Start(Key);
 }
 
 INT_PTR CALLBACK Client::PasswordWndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -67,9 +70,8 @@ INT_PTR CALLBACK Client::PasswordWndProc(HWND hDlg, UINT message, WPARAM wParam,
 			std::wstring Password = Pass;
 			std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
 			std::string PasswordUTF8 = utf8_conv.to_bytes(Password);
-			BYTE* SHA256 = Crypt.SHA256(PasswordUTF8);
-			memcpy(Me->Key, SHA256, 32);
-			Me->Start();
+			BYTE* SHA256 = Crypto::SHA256(PasswordUTF8);
+			Me->Start(SHA256);
 			SendMessage(hDlg, WM_CLOSE, 0, 0);
 		}
 	}
@@ -92,8 +94,11 @@ unsigned int TAP_CONTROL_CODE(unsigned int request, unsigned int method)
 	return CTL_CODE(0x00000022, request, method, 0);
 }
 
-void Client::Start()
+void Client::Start(BYTE Key[32])
 {
+	if (p2pCrypto)
+		delete p2pCrypto;
+	p2pCrypto = new Crypto(Key);
 	PIP_ADAPTER_ADDRESSES pAddressIP = (PIP_ADAPTER_ADDRESSES)malloc(sizeof(IP_ADAPTER_ADDRESSES));;
 	ULONG ulOutBufLen = sizeof(IP_ADAPTER_ADDRESSES);
 	// Get required buffer size
@@ -140,7 +145,6 @@ void Client::Start()
 		return;
 	}
 	free(pAddressIP);
-	Socket.Setp2pKey(Key);
 	SendRegister();
 }
 void Client::SendRegister()
@@ -159,7 +163,7 @@ void Client::SendRegister()
 		memcpy(Buffer + 20 + 7 + 6 + 1 + (18 * x), &MyExternalAddresses[x].sin6_addr, 16);
 		memcpy(Buffer + 20 + 7 + 6 + 1 + (18 * x) + 16, &MyExternalAddresses[x].sin6_port, 2);
 	}
-	int NewLen = Crypt.AES256_Encrypt(Buffer + 20, 7 + 6 + 1 + (18 * Count), Key);
+	int NewLen = p2pCrypto->AES256_Encrypt(Buffer + 20, 7 + 6 + 1 + (18 * Count));
 	Socket.SendToServer((char*)"RGST", Buffer, NewLen + 20);
 }
 
@@ -279,7 +283,7 @@ INT_PTR CALLBACK Client::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		RegSetKeyValue(MyKey, NULL, L"VLANID", REG_SZ, IDStr, lstrlenW(IDStr) * 2 + 2);
 		WCHAR KeyStr[100];
 		for (int x = 0; x < 32; x++)
-			wsprintf(KeyStr + x * 2, L"%02X ", SetMe->Key[x]);
+			wsprintf(KeyStr + x * 2, L"%02X ", SetMe->p2pCrypto->Key[x]);
 		RegSetKeyValue(MyKey, NULL, L"VLANKey", REG_SZ, KeyStr, lstrlenW(KeyStr) * 2 + 2);
 		RegCloseKey(MyKey);
 		RegCloseKey(Key);

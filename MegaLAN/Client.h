@@ -49,7 +49,6 @@ private:
 	HWND hDlg = NULL;
 	HWND hWnd = NULL;
 	std::wstring Name;
-	BYTE Key[32];
 	HANDLE Device = INVALID_HANDLE_VALUE;
 	HANDLE Thread = INVALID_HANDLE_VALUE;
 	struct in_addr IPv4_Address = { 0 };
@@ -58,13 +57,14 @@ private:
 	BYTE IPv6_PrefixLength = 64;
 	std::vector<Peer> PeerList;
 public:
+	Crypto* p2pCrypto = NULL;
 	BYTE ID[20];
 	BYTE MyMAC[6];
 	Client(BYTE* ID, std::wstring Name);
 	~Client();
 	void Login(bool Password);
 	void Login(BYTE* Key);
-	void Start();
+	void Start(BYTE Key[32]);
 	void SendRegister();
 	void OpenDevice();
 	void RegisterPeer(BYTE* UserID, BYTE* MAC, struct in6_addr &Address, UINT16 Port, UINT DiscoverySource);

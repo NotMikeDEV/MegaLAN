@@ -2,16 +2,17 @@
 class Crypto
 {
 private:
-	BYTE SHA1_Data[20];
-	BYTE SHA256_Data[32];
+	static BYTE SHA1_Data[20];
+	static BYTE SHA256_Data[32];
 public:
-	Crypto();
-	BYTE* SHA1(const BYTE* Buffer, int Length);
-	BYTE* SHA1(std::string String);
-	BYTE* SHA256(const BYTE* Buffer, int Length);
-	BYTE* SHA256(std::string String);
-	DWORD AES256_Decrypt(BYTE* Buffer, DWORD Length, BYTE* Key);
-	DWORD AES256_Encrypt(BYTE* Buffer, DWORD Length, BYTE* Key);
+	BYTE Key[32];
+	Crypto(BYTE* Key);
+	static BYTE* SHA1(const BYTE* Buffer, int Length);
+	static BYTE* SHA1(std::string String);
+	static BYTE* SHA256(const BYTE* Buffer, int Length);
+	static BYTE* SHA256(std::string String);
+	DWORD AES256_Decrypt(BYTE* Buffer, DWORD Length);
+	DWORD AES256_Encrypt(BYTE* Buffer, DWORD Length);
 	~Crypto();
 };
 
